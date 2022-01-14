@@ -7,7 +7,10 @@
 #ifndef _NMF_
 #define _NMF_
 
+#include <iostream>
 #include "common.hpp"
+
+void init_random_matrix(C_REAL* Mat, int N, int M, int seed);
 
 class NMF {
 /*
@@ -49,12 +52,13 @@ class NMF {
                 _random_seed(random_seed), _alpha_W(alpha_W), _alpha_H(alpha_H), 
                 _l1_ratio(l1_ratio) {}
         
+        ~NMF();
         int get_iterations() { return _iterations; }
         double get_error() { return _error; }
         C_REAL* get_W() { return _W; }
         C_REAL* get_H() { return _H; }
 
-        void fit_transform(C_REAL* V, C_REAL* W, C_REAL* H);
+        void fit_transform(const C_REAL* V);
     
     private:
         int _N, _M, _K;
@@ -72,7 +76,6 @@ class NMF {
         C_REAL* _H{NULL};
 
         void _fit_transform(C_REAL* V, C_REAL* W, C_REAL* H);
-        void _check_matrix(const C_REAL* Matrix, int N, int M);
         void _scale_regularization(const C_REAL* V, float* l1_reg_W, float* l1_reg_H, float* l2_reg_W, float* l2_reg_H);
         void _fit_multiplicative_update(const C_REAL* V, C_REAL* W, C_REAL* H, float beta_loss, 
             int max_iterations, double tolerance, float l1_reg_W, float l1_reg_H,
@@ -82,6 +85,7 @@ class NMF {
             float l2_reg_W, float gamma, C_REAL* H_sum, C_REAL* HHt, C_REAL* VHt);
         C_REAL* _multiplicative_update_h(const C_REAL* V, C_REAL* W, C_REAL* H, float beta_loss, float l1_reg_H, 
             float l2_reg_H, float gamma);
+        void save_results(C_REAL* W, C_REAL* H);
 };
 
 #endif
