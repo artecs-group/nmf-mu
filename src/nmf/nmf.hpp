@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include "common.hpp"
+#include "device/device.hpp"
 
 void init_random_matrix(C_REAL* Mat, int N, int M, int seed);
 
@@ -72,20 +73,20 @@ class NMF {
         float _l1_reg_W, _l1_reg_H, _l2_reg_W, _l2_reg_H;
         int _iterations{0};
         double _error{0.0};
-        C_REAL* _W{NULL};
-        C_REAL* _H{NULL};
+        C_REAL* _W{nullptr};
+        C_REAL* _H{nullptr};
 
-        void _fit_transform(C_REAL* V, C_REAL* W, C_REAL* H);
-        void _scale_regularization(const C_REAL* V, float* l1_reg_W, float* l1_reg_H, float* l2_reg_W, float* l2_reg_H);
-        void _fit_multiplicative_update(const C_REAL* V, C_REAL* W, C_REAL* H, float beta_loss, 
-            int max_iterations, double tolerance, float l1_reg_W, float l1_reg_H,
-            float l2_reg_W, float l2_reg_H);
-        float _beta_divergence(const C_REAL* V, C_REAL* W, C_REAL* H, bool square_root);
-        C_REAL* _multiplicative_update_w(const C_REAL* V, C_REAL* W, C_REAL* H, float beta_loss, float l1_reg_W, 
-            float l2_reg_W, float gamma, C_REAL* H_sum, C_REAL* HHt, C_REAL* VHt);
-        C_REAL* _multiplicative_update_h(const C_REAL* V, C_REAL* W, C_REAL* H, float beta_loss, float l1_reg_H, 
+        void _fit_transform(Device device);
+        void _scale_regularization(float* l1_reg_W, float* l1_reg_H, float* l2_reg_W, float* l2_reg_H);
+        void _fit_multiplicative_update(Device device, float beta_loss, int max_iterations, 
+            double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H);
+        float _beta_divergence(Device device);
+        C_REAL* _multiplicative_update_w(Device device, float beta_loss, float l1_reg_W, 
+            float l2_reg_W, float gamma);
+        C_REAL* _multiplicative_update_h(Device device, float beta_loss, float l1_reg_H, 
             float l2_reg_H, float gamma);
-        void save_results(C_REAL* W, C_REAL* H);
+        void _save_results(Device device);
+        void _check_non_negative(C_REAL* V);
 };
 
 #endif

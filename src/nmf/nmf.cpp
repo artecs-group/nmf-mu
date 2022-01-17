@@ -1,23 +1,11 @@
-#include <random>
+#include <algorithm>
 #include "nmf/nmf.hpp"
-#include "device/device.hpp"
-
-void init_random_matrix(C_REAL* Mat, int N, int M, int seed) {
-    if(seed == -1)
-        srand((unsigned)time(NULL));
-    else
-        srand(seed);
-    
-    for (size_t i = 0; i < N*M; i++)
-        Mat[i] = ((C_REAL)(rand())) / ((C_REAL) RAND_MAX);
-}
-
 
 NMF::~NMF() {
-    if(_W != NULL)
+    if(_W != nullptr)
         delete[] _W;
 
-    if(_H != NULL)
+    if(_H != nullptr)
         delete[] _H; 
 }
 
@@ -26,38 +14,108 @@ void NMF::fit_transform(const C_REAL* V) {
     if(V == NULL)
         throw "V argument is uninitialized";
 
-    // queue where to run the kernels
-    sycl::queue queue = get_queue();
-    C_REAL* dV = malloc_device<C_REAL>(_N * _M, queue);
-    C_REAL* sW = malloc_shared<C_REAL>(_N * _K, queue);
-    C_REAL* sH = malloc_shared<C_REAL>(_M * _K, queue);
-    
-    // Those matrices are for initialize random numbers.
-    // It is possible to use "oneapi/mkl/rng.hpp"
-    // but breaks the compatibility with other devices such CUDA.
-    init_random_matrix(sW, _N, _K, _random_seed);
-    init_random_matrix(sH, _M, _K, _random_seed);
-    copy_in(queue, V, dV, _N, _M);
+    _check_non_negative(V);
 
-    _fit_transform(V, W, H);
+    if(_beta_loss <= 0 && std::min_element(V, V+(_N*_M)) == 0)
+        throw "When beta_loss <= 0 and X contains zeros, 
+                the solver may diverge. Please add small values 
+                to X, or use a positive beta_loss.";
 
-    _error = _beta_divergence();
-    save_results(sW, sH);
-    free(sW, queue);
-    free(sH, queue);
+    // Load device where to run kernels
+    Device device(_random_seed, _N, _M, _K, V);
+
+    _fit_transform(device);
+
+    _error = _beta_divergence(device, _beta_loss);
+    _save_results(device);
 }
 
 
-void NMF::save_results(C_REAL* W, C_REAL* H) {
+void NMF::_save_results(Device device) {
     C_REAL* _W = new C_REAL[_N*_K];
     C_REAL* _H = new C_REAL[_M*_K];
 
-    std::copy(W, W + (_N*_K), _W);
-    std::copy(H, H + (_N*_K), _H); 
+    std::copy(device.W(), device.W() + (_N*_K), _W);
+    std::copy(device.H(), device.H() + (_N*_K), _H); 
 }
 
 
-void NMF::_fit_transform(C_REAL* V, C_REAL* W, C_REAL* H) {
+void NMF::_fit_transform(Device device) {
+    _scale_regularization(&_l1_reg_W, &_l1_reg_H, &_l2_reg_W, &_l2_reg_H);
+    _fit_multiplicative_update(device, _beta_loss, _max_iterations, _tolerance, 
+        _l1_reg_W, _l1_reg_H, _l2_reg_W, _l2_reg_H);
+}
+
+
+/**
+ * @brief Checks if there is non-negative numbers
+ * 
+ * @param V 
+ */
+void NMF::_check_non_negative(C_REAL* V) {
+    for (size_t i{0}; i < _N*_M; i++) {
+        if(V[i] < 0)
+            throw "Not allowed negative values in matrix V.";
+    }
+}
+
+
+void NMF::_scale_regularization(float* l1_reg_W, float* l1_reg_H, float* l2_reg_W, float* l2_reg_H) {
+    int n_samples{_N}, n_features{_M};
+
+    *l1_reg_W = n_features * (_alpha_W * _l1_ratio);
+    *l1_reg_H = n_samples * (_alpha_H * _l1_ratio);
+    *l2_reg_W = n_features * (_alpha_W * (1.0f - _l1_ratio));
+    *l2_reg_H = n_samples * (_alpha_H * (1.0f - _l1_ratio));
+}
+
+
+void NMF::_fit_multiplicative_update(Device device, float beta_loss, int max_iterations,
+    double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H) 
+{
+    // gamma for Maximization-Minimization (MM) algorithm [Fevotte 2011]
+    float gamma{0};
+    if(beta_loss < 1)
+        gamma = 1.0 / (2.0 - beta_loss);
+    else if(beta_loss > 2)
+        gamma = 1.0 / (beta_loss - 1.0);
+    else
+        gamma = 1.0;
+
+    // used for the convergence criterion
+    // Returns a float representing the divergence between X and WH, which is calculated as "||X - WH||_{loss}^2"
+    double error_at_init = _beta_divergence(device, beta_loss);
+    double previous_error{error_at_init};
+
+    for (size_t i{0}; i < _max_iterations; i++) {
+        //(X*H') / (W*H*H')
+        _multiplicative_update_w(device, beta_loss, l1_reg_W, l2_reg_W, gamma);
+    }
     
-    
+}
+
+
+/**
+ * @brief Compute the beta-divergence of X and dot(W, H), "||X - WH||_{loss}^2".
+ * 
+ * @param V 
+ * @param W 
+ * @param H 
+ * @param square_root 
+ * @param queue 
+ * @return float 
+ */
+float NMF::_beta_divergence(Device device) {
+    // Frobenius norm
+    if(_beta_loss == 2.0) {
+        // WH = W * H
+        gemm(device.W, device.H, device.WH, false, false, _N, _M, _K, _K, _M, _M);
+        // WH = V - WH
+        sub_matrices(device.V, device.WH, device.WH, _N, _M);
+        C_REAL result = nrm2(_N*_M, device.WH);
+
+        return result;
+    }
+    // TODO: add other beta divergences
+    return 0;
 }
