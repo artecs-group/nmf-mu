@@ -58,7 +58,6 @@ class NMF {
         double get_error() { return _error; }
         C_REAL* get_W() { return _W; }
         C_REAL* get_H() { return _H; }
-
         void fit_transform(const C_REAL* V, bool verbose);
     
     private:
