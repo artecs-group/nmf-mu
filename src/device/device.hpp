@@ -38,19 +38,25 @@ class IntelGpuSelector : public device_selector {
 class Device {
     public:
         C_REAL* dV{nullptr}, sW{nullptr}, sH{nullptr}, H_sum{nullptr}, 
-            HHt{nullptr}, VHt{nullptr}, WH{nullptr}, delta_W{nullptr}, delta_H{nullptr};
+            XXt{nullptr}, VHt{nullptr}, WtV{nullptr}, WH{nullptr}, delta_W{nullptr}, delta_H{nullptr};
 
         Device(int seed, int N, int M, int K, C_REAL* V);
         ~Device();
         void gemm(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb, int M, int N, int K, int lda, int ldb, int ldc);
         void sub_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N);
+        void div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N);
         C_REAL nrm2(int n, C_REAL* X);
+        void add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N);
+        void axpy(C_REAL* x, C_REAL* y, float scalar, int n);
+        void dot(C_REAL* x, C_REAL* y, int n);
+        void adjust_matrix(C_REAL* Mat, int M, int N);
     private:
         int _random_seed;
         sycl::queue _queue;
 
         sycl::queue _get_queue();
         void _init_random_matrix(C_REAL* Mat, int N, int M, int seed);
+        void _get_nd_range_dimensions(int M, int N, int* work_items, int* group_size);
 };
 
 #endif

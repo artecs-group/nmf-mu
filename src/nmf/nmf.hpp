@@ -59,7 +59,7 @@ class NMF {
         C_REAL* get_W() { return _W; }
         C_REAL* get_H() { return _H; }
 
-        void fit_transform(const C_REAL* V);
+        void fit_transform(const C_REAL* V, bool verbose);
     
     private:
         int _N, _M, _K;
@@ -76,15 +76,13 @@ class NMF {
         C_REAL* _W{nullptr};
         C_REAL* _H{nullptr};
 
-        void _fit_transform(Device device);
+        void _fit_transform(Device device, bool verbose);
         void _scale_regularization(float* l1_reg_W, float* l1_reg_H, float* l2_reg_W, float* l2_reg_H);
         void _fit_multiplicative_update(Device device, float beta_loss, int max_iterations, 
-            double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H);
+            double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H, bool verbose);
         float _beta_divergence(Device device);
-        C_REAL* _multiplicative_update_w(Device device, float beta_loss, float l1_reg_W, 
-            float l2_reg_W, float gamma);
-        C_REAL* _multiplicative_update_h(Device device, float beta_loss, float l1_reg_H, 
-            float l2_reg_H, float gamma);
+        C_REAL* _multiplicative_update_w(Device device, float beta_loss, float l1_reg_W, float l2_reg_W);
+        C_REAL* _multiplicative_update_h(Device device, float beta_loss, float l1_reg_H, float l2_reg_H);
         void _save_results(Device device);
         void _check_non_negative(C_REAL* V);
 };

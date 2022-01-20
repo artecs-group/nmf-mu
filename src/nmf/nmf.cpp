@@ -10,7 +10,7 @@ NMF::~NMF() {
 }
 
 
-void NMF::fit_transform(const C_REAL* V) {
+void NMF::fit_transform(const C_REAL* V, bool verbose) {
     if(V == NULL)
         throw "V argument is uninitialized";
 
@@ -24,7 +24,7 @@ void NMF::fit_transform(const C_REAL* V) {
     // Load device where to run kernels
     Device device(_random_seed, _N, _M, _K, V);
 
-    _fit_transform(device);
+    _fit_transform(device, verbose);
 
     _error = _beta_divergence(device, _beta_loss);
     _save_results(device);
@@ -40,10 +40,10 @@ void NMF::_save_results(Device device) {
 }
 
 
-void NMF::_fit_transform(Device device) {
+void NMF::_fit_transform(Device device, bool verbose) {
     _scale_regularization(&_l1_reg_W, &_l1_reg_H, &_l2_reg_W, &_l2_reg_H);
     _fit_multiplicative_update(device, _beta_loss, _max_iterations, _tolerance, 
-        _l1_reg_W, _l1_reg_H, _l2_reg_W, _l2_reg_H);
+        _l1_reg_W, _l1_reg_H, _l2_reg_W, _l2_reg_H, verbose);
 }
 
 
@@ -71,27 +71,116 @@ void NMF::_scale_regularization(float* l1_reg_W, float* l1_reg_H, float* l2_reg_
 
 
 void NMF::_fit_multiplicative_update(Device device, float beta_loss, int max_iterations,
-    double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H) 
+    double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H, 
+    bool verbose) 
 {
-    // gamma for Maximization-Minimization (MM) algorithm [Fevotte 2011]
-    float gamma{0};
-    if(beta_loss < 1)
-        gamma = 1.0 / (2.0 - beta_loss);
-    else if(beta_loss > 2)
-        gamma = 1.0 / (beta_loss - 1.0);
-    else
-        gamma = 1.0;
-
     // used for the convergence criterion
     // Returns a float representing the divergence between X and WH, which is calculated as "||X - WH||_{loss}^2"
     double error_at_init = _beta_divergence(device, beta_loss);
     double previous_error{error_at_init};
+    int n_iter{0};
 
-    for (size_t i{0}; i < _max_iterations; i++) {
-        //(X*H') / (W*H*H')
-        _multiplicative_update_w(device, beta_loss, l1_reg_W, l2_reg_W, gamma);
+    for (; n_iter < _max_iterations; n_iter++) {
+        //(V*H') / (W*H*H')
+        C_REAL* delta_W = _multiplicative_update_w(device, beta_loss, l1_reg_W, l2_reg_W);
+        // W = W .* delta_W
+        device.dot(device.W, delta_W, device.W, _N*_K);
+
+        //(W'*V) / (W'*W*H)
+        C_REAL* delta_H = _multiplicative_update_h(device, beta_loss, l1_reg_H, l2_reg_H);
+        // H = H .* delta_H
+        device.dot(device.H, delta_H, device.H, _K*_M);
+
+        // test convergence criterion every 10 iterations
+        if (tolerance > 0 && (n_iter % 10) == 0) {
+            _error = _beta_divergence(device, beta_loss);
+
+            if(verbose)
+                std::cout << "Epoch " << n_iter << ", error: " << _error << std::endl;
+            
+            if ((previous_error - _error) / error_at_init < tolerance)
+                break;
+
+            previous_error = _error
+        }
     }
-    
+
+    if (verbose && (tolerance == 0 || n_iter % 10 != 0))
+        std::cout << "Epoch " << n_iter << ", error: " << _error << std::endl;
+
+    _iterations = n_iter;
+}
+
+
+/**
+ * @brief Calculates delta_W as (V*H') / (W*H*H')
+ * 
+ * @param device 
+ * @param beta_loss unused in current version
+ * @param l1_reg_W 
+ * @param l2_reg_W 
+ * @param gamma 
+ * @return C_REAL* 
+ */
+C_REAL* _multiplicative_update_w(Device device, float beta_loss, float l1_reg_W, float l2_reg_W)
+{
+    // (numerator) VHt[N, K] = V[N, M] * H'[M, K]
+    device.gemm(device.V, device.H, device.VHt, false, true, _N, _K, _M, _M, _K, _K);
+
+    // (denominator) XXt[K, K] = H[K, M] * Ht[M, K]
+    device.gemm(device.H, device.H, device.XXt, false, true, _K, _K, _M, _M, _K, _K);
+    // (denominator) delta_W[N, K] = W[N, K] * XXt[K, K]
+    device.gemm(device.W, device.XXt, device.delta_W, false, false, _N, _K, _K, _K, _K, _K);
+
+    //Add L1 and L2 regularization
+    if (l1_reg_W > 0)
+        // denominator = denominator + l1_reg_W
+        device.add_scalar(device.delta_W, device.delta_W, l1_reg_W, _N, _K);
+    if (l2_reg_W > 0)
+        //denominator = l2_reg_W * W + denominator
+        device.axpy(device.W, device.delta_W, l2_reg_W, _N*_K);
+
+    device.adjust_matrix(device.delta_W, _N, _K);
+
+    // delta_W[N, K] = numerator[N, K] / denominator[N, K]
+    device.div_matrices(device.VHt, device.delta_W, delta.delta_W, _N, _K);
+
+    return device.delta_W;
+}
+
+
+/**
+ * @brief Calculates delta_H as (W'*V) / (W'*W*H)
+ * 
+ * @param device 
+ * @param beta_loss unused in current version
+ * @param l1_reg_H 
+ * @param l2_reg_H 
+ * @return C_REAL* 
+ */
+C_REAL* _multiplicative_update_h(Device device, float beta_loss, float l1_reg_H, float l2_reg_H) {
+    // (numerator) WtV[K, M] = W'[K, N] * V[N, M]
+    device.gemm(device.W, device.V, device.WtV, true, false, _K, _M, _N, _N, _M, _M);
+
+    // (denominator) XXt[K, K] = W'[K, N] * W[N, K]
+    device.gemm(device.W, device.W, device.XXt, true, false, _K, _K, _N, _N, _K, _K);
+    // (denominator) delta_H[K, M] = XXt[K, K] * H[K, M]
+    device.gemm(device.XXt, device.H, device.delta_H, false, false, _K, _M, _K, _K, _M, _M);
+
+    //Add L1 and L2 regularization
+    if (l1_reg_H > 0)
+        // denominator = denominator + l1_reg_H
+        device.add_scalar(device.delta_H, device.delta_H, l1_reg_H, _K, _M);
+    if (l2_reg_H > 0)
+        //denominator = l2_reg_H * H + denominator
+        device.axpy(device.H, device.delta_H, l2_reg_H, _K*_M);
+
+    device.adjust_matrix(device.delta_H, _K, _M);
+
+    // delta_H[K, M] = numerator[K, M] / denominator[K, M]
+    device.div_matrices(device.WtV, device.delta_H, delta.delta_H, _K, _M);
+
+    return device.delta_H;
 }
 
 
@@ -109,10 +198,10 @@ float NMF::_beta_divergence(Device device) {
     // Frobenius norm
     if(_beta_loss == 2.0) {
         // WH = W * H
-        gemm(device.W, device.H, device.WH, false, false, _N, _M, _K, _K, _M, _M);
+        device.gemm(device.W, device.H, device.WH, false, false, _N, _M, _K, _K, _M, _M);
         // WH = V - WH
-        sub_matrices(device.V, device.WH, device.WH, _N, _M);
-        C_REAL result = nrm2(_N*_M, device.WH);
+        device.sub_matrices(device.V, device.WH, device.WH, _N, _M);
+        C_REAL result = device.nrm2(_N*_M, device.WH);
 
         return result;
     }

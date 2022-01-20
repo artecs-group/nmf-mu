@@ -1,12 +1,13 @@
 #include <iostream>
 #include <random>
+#include <limits>
 #include "device/device.hpp"
 
 constexpr oneapi::mkl::transpose trans = oneapi::mkl::transpose::trans;
 constexpr oneapi::mkl::transpose non_trans = oneapi::mkl::transpose::nontrans;
 
 /* Spacing of floating point numbers. */
-constexpr C_REAL eps{2.2204e-16};
+static constexpr C_REAL EPS = std::numeric_limits<C_REAL>::epsilon();
 
 Device::Device(int seed, int N, int M, int K, C_REAL* V) {
 	_random_seed = seed;
@@ -17,8 +18,9 @@ Device::Device(int seed, int N, int M, int K, C_REAL* V) {
     sH         = malloc_shared<C_REAL>(K * M, _queue);
  	delta_W    = malloc_shared<C_REAL>(N * K, _queue);
     delta_H    = malloc_shared<C_REAL>(K * M, _queue);
-	HHt        = malloc_device<C_REAL>(M * M, _queue);
+	XXt        = malloc_device<C_REAL>(M * M, _queue);
 	VHt        = malloc_device<C_REAL>(N * M, _queue);
+	WtV		   = malloc_device<C_REAL>(K * M, _queue);
 	WH         = malloc_device<C_REAL>(N * M, _queue);
 	H_sum      = malloc_device<C_REAL>(K , _queue);
 
@@ -37,8 +39,9 @@ Device::~Device() {
 	if(sW != nullptr) free(sW, _queue);
 	if(sH != nullptr) free(sH, _queue);
 	if(H_sum != nullptr) free(H_sum, _queue);
-	if(HHt != nullptr) free(HHt, _queue);
+	if(XXt != nullptr) free(XXt, _queue);
 	if(VHt != nullptr) free(VHt, _queue);
+	if(WtV != nullptr) free(WtV, _queue);
 	if(WH != nullptr) free(WH, _queue);
 	if(delta_W != nullptr) free(delta_W, _queue);
 	if(delta_H != nullptr) free(delta_H, _queue);
@@ -85,9 +88,9 @@ void Device::_init_random_matrix(C_REAL* Mat, int N, int M, int seed) {
  * @param B 
  * @param _Ta 
  * @param _Tb 
- * @param N 
- * @param M 
- * @param K 
+ * @param N rows of A and C
+ * @param M columns of B and C
+ * @param K columns of A and rows of B
  * @param lda Elements between successive rows of A
  * @param ldb Elements between successive rows of B
  * @param ldc Elements between successive rows of C
@@ -112,12 +115,9 @@ void Device::gemm(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb,
  * @param N 
  */
 void Device::sub_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
-    int max_work_group_size = _queue.get_device().get_info<cl::sycl::info::device::max_work_group_size>();
-    int group_size = max_work_group_size < N ? max_work_group_size : N;
-
-    // adjust work-groups number 
-    int remainder = (N == group_size) ? 0 : group_size - (N % group_size);
-    int work_items = M * (N + remainder);
+    int group_size{0};
+    int work_items{0};
+	_get_nd_range_dimensions(M, N, &work_items, &group_size);
 
     _queue.submit([&](handler& cgh) {
         cgh.parallel_for<class A_sub_B>(nd_range(range(work_items), range(group_size)), [=](nd_item<1> item){
@@ -130,9 +130,91 @@ void Device::sub_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
 }
 
 
+/**
+ * @brief Computes C[M, N] = A[M, N] / B[M, N]
+ * 
+ * @param A 
+ * @param B 
+ * @param C 
+ * @param M 
+ * @param N 
+ */
+void div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
+    int group_size{0};
+    int work_items{0};
+	_get_nd_range_dimensions(M, N, &work_items, &group_size);
+
+    _queue.submit([&](handler& cgh) {
+        cgh.parallel_for<class A_div_B>(nd_range(range(work_items), range(group_size)), [=](nd_item<1> item){
+            int i = item.get_global_id(0);
+			
+			if(i < M*N)
+            	C[i] = A[i] / B[i];
+        });
+    });	
+}
+
+
 C_REAL Device::nrm2(int n, C_REAL* X) {
 	C_REAL result{0.0};
-	nrm2(_queue, n, X, 1, &result);
+	oneapi::mkl::blas::nrm2(_queue, n, X, 1, &result);
 	return result;
 }
 
+
+
+void add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N) {
+    int group_size{0};
+    int work_items{0};
+	_get_nd_range_dimensions(M, N, &work_items, &group_size);
+
+    _queue.submit([&](handler& cgh) {
+        cgh.parallel_for<class add_scalar>(nd_range(range(work_items), range(group_size)), [=](nd_item<1> item){
+            int i = item.get_global_id(0);
+			
+			if(i < M*N)
+            	out[i] = in[i] + scalar;
+        });
+    });	
+}
+
+
+/**
+ * @brief Calculates the number of work items and group size in base of the input dimensions.
+ * 
+ * @param M 
+ * @param N 
+ * @param work_items 
+ * @param group_size 
+ */
+void _get_nd_range_dimensions(int M, int N, int* work_items, int* group_size) {
+	int max_work_group_size = _queue.get_device().get_info<cl::sycl::info::device::max_work_group_size>();
+    *group_size = max_work_group_size < N ? max_work_group_size : N;
+
+    // adjust work-groups number 
+    int remainder = (N == group_size) ? 0 : group_size - (N % group_size);
+    *work_items = M * (N + remainder);
+}
+
+
+void axpy(C_REAL* x, C_REAL* y, float scalar, int n) {
+	oneapi::mkl::blas::axpy(_queue, n, scalar, x, 1, y, 1);
+}
+
+
+void adjust_matrix(C_REAL* Mat, int M, int N) {
+    q.submit([&](handler& cgh) {
+        cgh.parallel_for<class check_matrix>(range<2>(M, N), [=](id <2> ij){
+            int i = ij[0];
+            int j = ij[1];
+
+            if(Mat[i*N + j] == 0)
+                Mat[i*N + j] = EPS;
+        });
+    });
+}
+
+
+void dot(C_REAL* x, C_REAL* y, C_REAL* out, int n) {
+	oneapi::mkl::blas::dot(_queue, n, x, 1, y, 1, out);
+}
