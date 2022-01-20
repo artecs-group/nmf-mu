@@ -49,7 +49,7 @@ Device::~Device() {
 
 
 sycl::queue Device::_get_queue() {
-#if defined(INTEL_IGPU_DEVICE)
+#if defined(INTEL_GPU_DEVICE)
 	IntelGPUSelector selector{};
 #elif defined(NVIDIA_DEVICE)
 	CUDASelector selector{};
