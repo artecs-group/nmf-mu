@@ -1,17 +1,5 @@
 #include <algorithm>
-#include <sys/time.h>
 #include "./nmf.hpp"
-
-
-double gettime() {
-	double final_time;
-	struct timeval tv1;
-	
-	gettimeofday(&tv1, (struct timezone*)0);
-	final_time = (tv1.tv_usec + (tv1.tv_sec)*1000000ULL);
-
-	return final_time;
-}
 
 
 NMF::NMF(int N, int M, int K, std::optional<double> tolerance, std::optional<int> max_iterations,
@@ -49,14 +37,8 @@ void NMF::fit_transform(C_REAL* V, bool verbose) {
     // Load device where to run kernels
     Device device(_random_seed, _N, _M, _K, V);
 
-    double t_init = gettime();
-
     _fit_transform(device, verbose);
     _error = _beta_divergence(device);
-
-    std::cout << "Total time = " << (gettime() - t_init) << " (us)" << std::endl;
-    std::cout << "Final error = " << _error << std::endl;
-
     _save_results(device);
 }
 
