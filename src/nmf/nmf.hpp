@@ -8,8 +8,8 @@
 #define _NMF_
 
 #include <iostream>
-#include "common.hpp"
-#include "device/device.hpp"
+#include "../common.hpp"
+#include "../device/device.hpp"
 
 void init_random_matrix(C_REAL* Mat, int N, int M, int seed);
 
@@ -58,7 +58,7 @@ class NMF {
         double get_error() { return _error; }
         C_REAL* get_W() { return _W; }
         C_REAL* get_H() { return _H; }
-        void fit_transform(const C_REAL* V, bool verbose);
+        void fit_transform(C_REAL* V, bool verbose);
     
     private:
         int _N, _M, _K;

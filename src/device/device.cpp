@@ -1,7 +1,8 @@
 #include <iostream>
 #include <random>
 #include <limits>
-#include "device/device.hpp"
+#include "oneapi/mkl.hpp"
+#include "./device.hpp"
 
 constexpr oneapi::mkl::transpose trans = oneapi::mkl::transpose::trans;
 constexpr oneapi::mkl::transpose non_trans = oneapi::mkl::transpose::nontrans;
@@ -139,7 +140,7 @@ void Device::sub_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
  * @param M 
  * @param N 
  */
-void div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
+void Device::div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
     int group_size{0};
     int work_items{0};
 	_get_nd_range_dimensions(M, N, &work_items, &group_size);
@@ -163,7 +164,7 @@ C_REAL Device::nrm2(int n, C_REAL* X) {
 
 
 
-void add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N) {
+void Device::add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N) {
     int group_size{0};
     int work_items{0};
 	_get_nd_range_dimensions(M, N, &work_items, &group_size);
@@ -187,24 +188,24 @@ void add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N) {
  * @param work_items 
  * @param group_size 
  */
-void _get_nd_range_dimensions(int M, int N, int* work_items, int* group_size) {
+void Device::_get_nd_range_dimensions(int M, int N, int* work_items, int* group_size) {
 	int max_work_group_size = _queue.get_device().get_info<cl::sycl::info::device::max_work_group_size>();
     *group_size = max_work_group_size < N ? max_work_group_size : N;
 
     // adjust work-groups number 
-    int remainder = (N == group_size) ? 0 : group_size - (N % group_size);
+    int remainder = (N == *group_size) ? 0 : *group_size - (N % *group_size);
     *work_items = M * (N + remainder);
 }
 
 
-void axpy(C_REAL* x, C_REAL* y, float scalar, int n) {
+void Device::axpy(C_REAL* x, C_REAL* y, float scalar, int n) {
 	oneapi::mkl::blas::axpy(_queue, n, scalar, x, 1, y, 1);
 }
 
 
-void adjust_matrix(C_REAL* Mat, int M, int N) {
-    q.submit([&](handler& cgh) {
-        cgh.parallel_for<class check_matrix>(range<2>(M, N), [=](id <2> ij){
+void Device::adjust_matrix(C_REAL* Mat, int M, int N) {
+    _queue.submit([&](handler& cgh) {
+        cgh.parallel_for<class adjust_matrix>(range<2>(M, N), [=](id <2> ij){
             int i = ij[0];
             int j = ij[1];
 
@@ -215,6 +216,6 @@ void adjust_matrix(C_REAL* Mat, int M, int N) {
 }
 
 
-void dot(C_REAL* x, C_REAL* y, C_REAL* out, int n) {
+void Device::dot(C_REAL* x, C_REAL* y, C_REAL* out, int n) {
 	oneapi::mkl::blas::dot(_queue, n, x, 1, y, 1, out);
 }

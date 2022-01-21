@@ -1,18 +1,18 @@
-#ifndef _DEVICE_
-#define _DEVICE_
+#ifndef _DEVICE_NMF_
+#define _DEVICE_NMF_
 
 #include <stdlib.h>
 #include <string>
 #include <CL/sycl.hpp>
-#include "common.hpp"
+#include "../common.hpp"
 
 using namespace cl::sycl;
 
 // CUDA GPU selector
-class CudaGpuSelector : public device_selector {
+class CudaGpuSelector : public cl::sycl::device_selector {
     public:
-        int operator()(const device &Device) const override {
-            const std::string DriverVersion = Device.get_info<info::device::driver_version>();
+        int operator()(const cl::sycl::device &Device) const override {
+            const std::string DriverVersion = Device.get_info<sycl::info::device::driver_version>();
 
             if (Device.is_gpu() && (DriverVersion.find("CUDA") != std::string::npos))
                 return 1;
@@ -22,10 +22,10 @@ class CudaGpuSelector : public device_selector {
 };
 
 // Intel GPU
-class IntelGpuSelector : public device_selector {
+class IntelGpuSelector : public cl::sycl::device_selector {
     public:
-        int operator()(const device &Device) const override {
-            const std::string vendor = Device.get_info<info::device::vendor>();
+        int operator()(const cl::sycl::device &Device) const override {
+            const std::string vendor = Device.get_info<sycl::info::device::vendor>();
 
             if (Device.is_gpu() && (vendor.find("Intel(R) Corporation") != std::string::npos))
                 return 1;
@@ -37,8 +37,8 @@ class IntelGpuSelector : public device_selector {
 
 class Device {
     public:
-        C_REAL* dV{nullptr}, sW{nullptr}, sH{nullptr}, H_sum{nullptr}, 
-            XXt{nullptr}, VHt{nullptr}, WtV{nullptr}, WH{nullptr}, delta_W{nullptr}, delta_H{nullptr};
+        C_REAL *dV{nullptr}, *sW{nullptr}, *sH{nullptr}, *H_sum{nullptr}, 
+            *XXt{nullptr}, *VHt{nullptr}, *WtV{nullptr}, *WH{nullptr}, *delta_W{nullptr}, *delta_H{nullptr};
 
         Device(int seed, int N, int M, int K, C_REAL* V);
         ~Device();
@@ -48,7 +48,7 @@ class Device {
         C_REAL nrm2(int n, C_REAL* X);
         void add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N);
         void axpy(C_REAL* x, C_REAL* y, float scalar, int n);
-        void dot(C_REAL* x, C_REAL* y, int n);
+        void dot(C_REAL* x, C_REAL* y, C_REAL* out, int n);
         void adjust_matrix(C_REAL* Mat, int M, int N);
     private:
         int _random_seed;
