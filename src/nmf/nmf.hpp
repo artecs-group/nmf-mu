@@ -46,13 +46,10 @@ class NMF {
  * and H.
 */
     public:
-        NMF(int N, int M, int K, double tolerance=1e-4, int max_iterations=200,
-            int random_seed=-1, float alpha_W=0.0, float alpha_H=0.0, 
-            float l1_ratio=0.0) : 
-                _N(N), _M(M), _K(K), _tolerance(tolerance), _max_iterations(max_iterations),
-                _random_seed(random_seed), _alpha_W(alpha_W), _alpha_H(alpha_H), 
-                _l1_ratio(l1_ratio) {}
-        
+        NMF(int N, int M, int K, std::optional<double> tolerance, std::optional<int> max_iterations,
+            std::optional<int> random_seed, std::optional<float> alpha_W, std::optional<float> alpha_H, 
+            std::optional<float> l1_ratio);
+
         ~NMF();
         int get_iterations() { return _iterations; }
         double get_error() { return _error; }

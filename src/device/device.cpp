@@ -67,7 +67,7 @@ sycl::queue Device::_get_queue() {
 
 
 void Device::_init_random_matrix(C_REAL* Mat, int N, int M, int seed) {
-    if(seed == -1)
+    if(seed < 0)
         srand((unsigned)time(NULL));
     else
         srand(seed);

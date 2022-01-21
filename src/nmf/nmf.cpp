@@ -14,6 +14,20 @@ double gettime() {
 }
 
 
+NMF::NMF(int N, int M, int K, std::optional<double> tolerance, std::optional<int> max_iterations,
+    std::optional<int> random_seed, std::optional<float> alpha_W, std::optional<float> alpha_H, 
+    std::optional<float> l1_ratio)
+{
+    _N = N; _M = M; _K = K;
+    _tolerance = tolerance.has_value() ? tolerance.value() : 1e-4;
+    _max_iterations = max_iterations.has_value() ? max_iterations.value() : 200;
+    _random_seed = random_seed.has_value() ? random_seed.value() : -1;
+    _alpha_W = alpha_W.has_value() ? alpha_W.value() : 0.0;
+    _alpha_H = alpha_H.has_value() ? alpha_H.value() : 0.0;
+    _l1_ratio = l1_ratio.has_value() ? l1_ratio.value() : 0.0;
+}
+
+
 NMF::~NMF() {
     if(_W != nullptr)
         delete[] _W;
