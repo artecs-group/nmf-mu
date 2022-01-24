@@ -42,6 +42,7 @@ class Device {
 
         Device(int seed, int N, int M, int K, C_REAL* V);
         ~Device();
+        void sync();
         void mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb, int M, int N, int K, int lda, int ldb, int ldc);
         void sub_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N);
         void div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N);
