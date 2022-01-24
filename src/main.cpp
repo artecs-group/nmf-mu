@@ -114,6 +114,7 @@ void print_matrix(C_REAL *m, int I, int J) {
 			std::cout << m[i*J + j] << " ";
 		std::cout << std::endl;
 	}
+    std::cout << std::endl;
 }
 
 

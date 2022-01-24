@@ -44,11 +44,11 @@ void NMF::fit_transform(C_REAL* V, bool verbose) {
 
 
 void NMF::_save_results(Device* device) {
-    C_REAL* _W = new C_REAL[_N*_K];
-    C_REAL* _H = new C_REAL[_M*_K];
+    _W = new C_REAL[_N*_K];
+    _H = new C_REAL[_K*_M];
 
     std::copy(device->sW, device->sW + (_N*_K), _W);
-    std::copy(device->sH, device->sH + (_N*_K), _H); 
+    std::copy(device->sH, device->sH + (_K*_M), _H);
 }
 
 
