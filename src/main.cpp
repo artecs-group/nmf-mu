@@ -16,7 +16,7 @@ double gettime() {
 }
 
 
-void parse_arguments(int argc, char **argv, char* file_name, std::optional<double>* tolerance,
+void parse_arguments(int argc, char **argv, int* N, int* M, int* K, char* file_name, std::optional<double>* tolerance,
     std::optional<int>* max_it, std::optional<int>* seed, std::optional<float>* alpha_W,
     std::optional<float>* alpha_H, std::optional<float>* l1_ratio) 
 {
@@ -28,9 +28,9 @@ void parse_arguments(int argc, char **argv, char* file_name, std::optional<doubl
 	}
 
     strcpy(file_name, argv[1]);
-	int N = atoi(argv[2]);
-    int M = atoi(argv[3]);
-    int K = atoi(argv[4]);
+	*N = atoi(argv[2]);
+    *M = atoi(argv[3]);
+    *K = atoi(argv[4]);
 
     //parse optional arguments
     for(int i{5} ; i < argc; i++) {
@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
     std::optional<float> alpha_H = std::nullopt;
     std::optional<float> l1_ratio = std::nullopt;
 
-    parse_arguments(argc, argv, file_name, &tolerance, &max_it, &seed, &alpha_W, &alpha_H, &l1_ratio);
+    parse_arguments(argc, argv, &N, &M, &K, file_name, &tolerance, &max_it, &seed, &alpha_W, &alpha_H, &l1_ratio);
 
     C_REAL* V = get_V(N, M, file_name);
     
