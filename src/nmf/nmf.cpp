@@ -137,12 +137,12 @@ void NMF::_fit_multiplicative_update(Device device, float beta_loss, int max_ite
 C_REAL* NMF::_multiplicative_update_w(Device device, float beta_loss, float l1_reg_W, float l2_reg_W)
 {
     // (numerator) VHt[N, K] = V[N, M] * H'[M, K]
-    device.gemm(device.dV, device.sH, device.VHt, false, true, _N, _K, _M, _M, _K, _K);
+    device.mat_mul(device.dV, device.sH, device.VHt, false, true, _N, _K, _M, _M, _K, _K);
 
     // (denominator) XXt[K, K] = H[K, M] * Ht[M, K]
-    device.gemm(device.sH, device.sH, device.XXt, false, true, _K, _K, _M, _M, _K, _K);
+    device.mat_mul(device.sH, device.sH, device.XXt, false, true, _K, _K, _M, _M, _K, _K);
     // (denominator) delta_W[N, K] = W[N, K] * XXt[K, K]
-    device.gemm(device.sW, device.XXt, device.delta_W, false, false, _N, _K, _K, _K, _K, _K);
+    device.mat_mul(device.sW, device.XXt, device.delta_W, false, false, _N, _K, _K, _K, _K, _K);
 
     //Add L1 and L2 regularization
     if (l1_reg_W > 0)
@@ -172,12 +172,12 @@ C_REAL* NMF::_multiplicative_update_w(Device device, float beta_loss, float l1_r
  */
 C_REAL* NMF::_multiplicative_update_h(Device device, float beta_loss, float l1_reg_H, float l2_reg_H) {
     // (numerator) WtV[K, M] = W'[K, N] * V[N, M]
-    device.gemm(device.sW, device.dV, device.WtV, true, false, _K, _M, _N, _N, _M, _M);
+    device.mat_mul(device.sW, device.dV, device.WtV, true, false, _K, _M, _N, _N, _M, _M);
 
     // (denominator) XXt[K, K] = W'[K, N] * W[N, K]
-    device.gemm(device.sW, device.sW, device.XXt, true, false, _K, _K, _N, _N, _K, _K);
+    device.mat_mul(device.sW, device.sW, device.XXt, true, false, _K, _K, _N, _N, _K, _K);
     // (denominator) delta_H[K, M] = XXt[K, K] * H[K, M]
-    device.gemm(device.XXt, device.sH, device.delta_H, false, false, _K, _M, _K, _K, _M, _M);
+    device.mat_mul(device.XXt, device.sH, device.delta_H, false, false, _K, _M, _K, _K, _M, _M);
 
     //Add L1 and L2 regularization
     if (l1_reg_H > 0)
@@ -210,7 +210,7 @@ float NMF::_beta_divergence(Device device) {
     // Frobenius norm
     if(_beta_loss == 2.0) {
         // WH = W * H
-        device.gemm(device.sW, device.sH, device.WH, false, false, _N, _M, _K, _K, _M, _M);
+        device.mat_mul(device.sW, device.sH, device.WH, false, false, _N, _M, _K, _K, _M, _M);
         // WH = V - WH
         device.sub_matrices(device.dV, device.WH, device.WH, _N, _M);
         C_REAL result = device.nrm2(_N*_M, device.WH);

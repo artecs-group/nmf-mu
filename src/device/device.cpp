@@ -96,7 +96,7 @@ void Device::_init_random_matrix(C_REAL* Mat, int N, int M, int seed) {
  * @param ldb Elements between successive rows of B
  * @param ldc Elements between successive rows of C
  */
-void Device::gemm(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb, 
+void Device::mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb, 
 	int M, int N, int K, int lda, int ldb, int ldc)
 {
 	oneapi::mkl::transpose Ta = _Ta ? trans : non_trans;
