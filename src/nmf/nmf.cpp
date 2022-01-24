@@ -139,7 +139,7 @@ C_REAL* NMF::_multiplicative_update_w(Device device, float beta_loss, float l1_r
     // (numerator) VHt[N, K] = V[N, M] * H'[M, K]
     device.mat_mul(device.dV, device.sH, device.VHt, false, true, _N, _K, _M, _M, _K, _K);
 
-    // (denominator) XXt[K, K] = H[K, M] * Ht[M, K]
+    // (denominator) XXt[K, K] = H[K, M] * H'[M, K]
     device.mat_mul(device.sH, device.sH, device.XXt, false, true, _K, _K, _M, _M, _K, _K);
     // (denominator) delta_W[N, K] = W[N, K] * XXt[K, K]
     device.mat_mul(device.sW, device.XXt, device.delta_W, false, false, _N, _K, _K, _K, _K, _K);
@@ -209,7 +209,7 @@ C_REAL* NMF::_multiplicative_update_h(Device device, float beta_loss, float l1_r
 float NMF::_beta_divergence(Device device) {
     // Frobenius norm
     if(_beta_loss == 2.0) {
-        // WH = W * H
+        // WH[N, M] = W[N, K] * H[K, M]
         device.mat_mul(device.sW, device.sH, device.WH, false, false, _N, _M, _K, _K, _M, _M);
         // WH = V - WH
         device.sub_matrices(device.dV, device.WH, device.WH, _N, _M);

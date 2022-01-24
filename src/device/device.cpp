@@ -19,11 +19,10 @@ Device::Device(int seed, int N, int M, int K, C_REAL* V) {
     sH         = malloc_shared<C_REAL>(K * M, _queue);
  	delta_W    = malloc_shared<C_REAL>(N * K, _queue);
     delta_H    = malloc_shared<C_REAL>(K * M, _queue);
-	XXt        = malloc_device<C_REAL>(M * M, _queue);
-	VHt        = malloc_device<C_REAL>(N * M, _queue);
+	XXt        = malloc_device<C_REAL>(K * K, _queue);
+	VHt        = malloc_device<C_REAL>(N * K, _queue);
 	WtV		   = malloc_device<C_REAL>(K * M, _queue);
 	WH         = malloc_device<C_REAL>(N * M, _queue);
-	H_sum      = malloc_device<C_REAL>(K , _queue);
 
     // Those matrices are for initialize random numbers.
     // It is possible to use "oneapi/mkl/rng.hpp"
@@ -39,7 +38,6 @@ Device::~Device() {
 	if(dV != nullptr) free(dV, _queue);
 	if(sW != nullptr) free(sW, _queue);
 	if(sH != nullptr) free(sH, _queue);
-	if(H_sum != nullptr) free(H_sum, _queue);
 	if(XXt != nullptr) free(XXt, _queue);
 	if(VHt != nullptr) free(VHt, _queue);
 	if(WtV != nullptr) free(WtV, _queue);
@@ -102,7 +100,7 @@ void Device::mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb,
 	oneapi::mkl::transpose Ta = _Ta ? trans : non_trans;
 	oneapi::mkl::transpose Tb = _Tb ? trans : non_trans;
 
-	oneapi::mkl::blas::gemm(_queue, Ta, Tb, M, N, K, 1, A, lda, B, ldb, 0, C, ldc);
+	oneapi::mkl::blas::row_major::gemm(_queue, Ta, Tb, M, N, K, 1, A, lda, B, ldb, 0, C, ldc);
 }
 
 

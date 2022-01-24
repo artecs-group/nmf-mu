@@ -37,8 +37,8 @@ class IntelGpuSelector : public cl::sycl::device_selector {
 
 class Device {
     public:
-        C_REAL *dV{nullptr}, *sW{nullptr}, *sH{nullptr}, *H_sum{nullptr}, 
-            *XXt{nullptr}, *VHt{nullptr}, *WtV{nullptr}, *WH{nullptr}, *delta_W{nullptr}, *delta_H{nullptr};
+        C_REAL *dV{nullptr}, *sW{nullptr}, *sH{nullptr}, *XXt{nullptr}, 
+            *VHt{nullptr}, *WtV{nullptr}, *WH{nullptr}, *delta_W{nullptr}, *delta_H{nullptr};
 
         Device(int seed, int N, int M, int K, C_REAL* V);
         ~Device();
