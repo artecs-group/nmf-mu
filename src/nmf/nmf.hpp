@@ -55,7 +55,7 @@ class NMF {
         double get_error() { return _error; }
         C_REAL* get_W() { return _W; }
         C_REAL* get_H() { return _H; }
-        void fit_transform(C_REAL* V);
+        void fit_transform(C_REAL* V, C_REAL* W=nullptr, C_REAL* H=nullptr);
     
     private:
         int _N, _M, _K;

@@ -26,7 +26,7 @@ NMF::~NMF() {
 }
 
 
-void NMF::fit_transform(C_REAL* V) {
+void NMF::fit_transform(C_REAL* V, C_REAL* W, C_REAL* H) {
     if(V == NULL)
         throw "V argument is uninitialized";
 
@@ -36,7 +36,7 @@ void NMF::fit_transform(C_REAL* V) {
         throw "When beta_loss <= 0 and X contains zeros, the solver may diverge. Please add small values to X, or use a positive beta_loss.";
 
     // Load device where to run kernels
-    Device device(_random_seed, _N, _M, _K, V);
+    Device device(_random_seed, _N, _M, _K, V, W, H);
 
     _fit_transform(&device);
     _error = _beta_divergence(&device);

@@ -40,7 +40,7 @@ class Device {
         C_REAL *dV{nullptr}, *sW{nullptr}, *sH{nullptr}, *XXt{nullptr}, 
             *VHt{nullptr}, *WtV{nullptr}, *WH{nullptr}, *delta_W{nullptr}, *delta_H{nullptr};
 
-        Device(int seed, int N, int M, int K, C_REAL* V);
+        Device(int seed, int N, int M, int K, C_REAL* V, C_REAL* W, C_REAL* H);
         ~Device();
         void sync();
         void mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb, int M, int N, int K, int lda, int ldb, int ldc);

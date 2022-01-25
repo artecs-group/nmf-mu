@@ -10,7 +10,7 @@ constexpr oneapi::mkl::transpose non_trans = oneapi::mkl::transpose::nontrans;
 /* Spacing of floating point numbers. */
 static constexpr C_REAL EPS = std::numeric_limits<C_REAL>::epsilon();
 
-Device::Device(int seed, int N, int M, int K, C_REAL* V) {
+Device::Device(int seed, int N, int M, int K, C_REAL* V, C_REAL* W, C_REAL* H) {
 	_random_seed = seed;
 	_queue = _get_queue();
 
@@ -24,11 +24,14 @@ Device::Device(int seed, int N, int M, int K, C_REAL* V) {
 	WtV		   = malloc_device<C_REAL>(K * M, _queue);
 	WH         = malloc_device<C_REAL>(N * M, _queue);
 
-    // Those matrices are for initialize random numbers.
-    // It is possible to use "oneapi/mkl/rng.hpp"
-    // but breaks the compatibility with other devices such CUDA.
-    _init_random_matrix(sW, N, K, _random_seed);
-    _init_random_matrix(sH, K, M, _random_seed);
+    if(W != nullptr && H != nullptr) {
+        _queue.memcpy(sW, W, sizeof(C_REAL) * N*K);
+        _queue.memcpy(sH, H, sizeof(C_REAL) * K*M);
+    }
+    else {
+        _init_random_matrix(sW, N, K, _random_seed);
+        _init_random_matrix(sH, K, M, _random_seed);
+    }
 	
 	_queue.memcpy(dV, V, sizeof(C_REAL) * N*M);
 }
@@ -58,9 +61,9 @@ sycl::queue Device::_get_queue() {
 	default_selector selector{};
 #endif
 
-	sycl::queue q{selector};
-	std::cout << "Running on " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
-    return q;
+	sycl::queue queue{selector};
+	std::cout << "Running on " << queue.get_device().get_info<sycl::info::device::name>() << std::endl;
+    return queue;
 }
 
 
@@ -70,6 +73,8 @@ void Device::sync() {
 
 
 void Device::_init_random_matrix(C_REAL* Mat, int N, int M, int seed) {
+    // It is possible to use "oneapi/mkl/rng.hpp"
+    // but breaks the compatibility with other devices such CUDA.
     if(seed < 0)
         srand((unsigned)time(NULL));
     else
