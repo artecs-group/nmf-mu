@@ -4,7 +4,7 @@
 
 NMF::NMF(int N, int M, int K, std::optional<double> tolerance, std::optional<int> max_iterations,
     std::optional<int> random_seed, std::optional<float> alpha_W, std::optional<float> alpha_H, 
-    std::optional<float> l1_ratio)
+    std::optional<float> l1_ratio, bool verbose)
 {
     _N = N; _M = M; _K = K;
     _tolerance = tolerance.has_value() ? tolerance.value() : 1e-4;
@@ -13,6 +13,7 @@ NMF::NMF(int N, int M, int K, std::optional<double> tolerance, std::optional<int
     _alpha_W = alpha_W.has_value() ? alpha_W.value() : 0.0;
     _alpha_H = alpha_H.has_value() ? alpha_H.value() : 0.0;
     _l1_ratio = l1_ratio.has_value() ? l1_ratio.value() : 0.0;
+    _verbose = verbose;
 }
 
 
@@ -25,7 +26,7 @@ NMF::~NMF() {
 }
 
 
-void NMF::fit_transform(C_REAL* V, bool verbose) {
+void NMF::fit_transform(C_REAL* V) {
     if(V == NULL)
         throw "V argument is uninitialized";
 
@@ -37,7 +38,7 @@ void NMF::fit_transform(C_REAL* V, bool verbose) {
     // Load device where to run kernels
     Device device(_random_seed, _N, _M, _K, V);
 
-    _fit_transform(&device, verbose);
+    _fit_transform(&device);
     _error = _beta_divergence(&device);
     _save_results(&device);
 }
@@ -52,10 +53,10 @@ void NMF::_save_results(Device* device) {
 }
 
 
-void NMF::_fit_transform(Device* device, bool verbose) {
+void NMF::_fit_transform(Device* device) {
     _scale_regularization(&_l1_reg_W, &_l1_reg_H, &_l2_reg_W, &_l2_reg_H);
     _fit_multiplicative_update(device, _beta_loss, _max_iterations, _tolerance, 
-        _l1_reg_W, _l1_reg_H, _l2_reg_W, _l2_reg_H, verbose);
+        _l1_reg_W, _l1_reg_H, _l2_reg_W, _l2_reg_H);
 }
 
 
@@ -83,8 +84,7 @@ void NMF::_scale_regularization(float* l1_reg_W, float* l1_reg_H, float* l2_reg_
 
 
 void NMF::_fit_multiplicative_update(Device* device, float beta_loss, int max_iterations,
-    double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H, 
-    bool verbose) 
+    double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H) 
 {
     // used for the convergence criterion
     // Returns a float representing the divergence between X and WH, which is calculated as "||X - WH||_{loss}^2"
@@ -107,7 +107,7 @@ void NMF::_fit_multiplicative_update(Device* device, float beta_loss, int max_it
         if (tolerance > 0 && (n_iter % 10) == 0) {
             _error = _beta_divergence(device);
 
-            if(verbose)
+            if(_verbose)
                 std::cout << "Epoch " << n_iter << ", error: " << _error << std::endl;
             
             if ((previous_error - _error) / error_at_init < tolerance)
@@ -117,7 +117,7 @@ void NMF::_fit_multiplicative_update(Device* device, float beta_loss, int max_it
         }
     }
 
-    if (verbose && (tolerance == 0 || n_iter % 10 != 0))
+    if (_verbose && (tolerance == 0 || n_iter % 10 != 0))
         std::cout << "Epoch " << n_iter << ", error: " << _error << std::endl;
 
     _iterations = n_iter;

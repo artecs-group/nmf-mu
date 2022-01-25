@@ -48,14 +48,14 @@ class NMF {
     public:
         NMF(int N, int M, int K, std::optional<double> tolerance, std::optional<int> max_iterations,
             std::optional<int> random_seed, std::optional<float> alpha_W, std::optional<float> alpha_H, 
-            std::optional<float> l1_ratio);
+            std::optional<float> l1_ratio, bool verbose=false);
 
         ~NMF();
         int get_iterations() { return _iterations; }
         double get_error() { return _error; }
         C_REAL* get_W() { return _W; }
         C_REAL* get_H() { return _H; }
-        void fit_transform(C_REAL* V, bool verbose);
+        void fit_transform(C_REAL* V);
     
     private:
         int _N, _M, _K;
@@ -65,6 +65,7 @@ class NMF {
         int _random_seed; // by -1 we mean initialize seed with time
         float _alpha_W;
         float _alpha_H;
+        bool _verbose;
         float _l1_ratio;
         float _l1_reg_W, _l1_reg_H, _l2_reg_W, _l2_reg_H;
         int _iterations{0};
@@ -72,10 +73,10 @@ class NMF {
         C_REAL* _W{nullptr};
         C_REAL* _H{nullptr};
 
-        void _fit_transform(Device* device, bool verbose);
+        void _fit_transform(Device* device);
         void _scale_regularization(float* l1_reg_W, float* l1_reg_H, float* l2_reg_W, float* l2_reg_H);
         void _fit_multiplicative_update(Device* device, float beta_loss, int max_iterations, 
-            double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H, bool verbose);
+            double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H);
         float _beta_divergence(Device* device);
         C_REAL* _multiplicative_update_w(Device* device, float beta_loss, float l1_reg_W, float l2_reg_W);
         C_REAL* _multiplicative_update_h(Device* device, float beta_loss, float l1_reg_H, float l2_reg_H);

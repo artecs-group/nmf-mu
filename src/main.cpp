@@ -18,13 +18,12 @@ double gettime() {
 
 void parse_arguments(int argc, char **argv, int* N, int* M, int* K, char* file_name, std::optional<double>* tolerance,
     std::optional<int>* max_it, std::optional<int>* seed, std::optional<float>* alpha_W,
-    std::optional<float>* alpha_H, std::optional<float>* l1_ratio) 
+    std::optional<float>* alpha_H, std::optional<float>* l1_ratio, bool* verbose) 
 {
     if (argc < 5 || argc > 17) {
         std::cerr 
             << "./exec dataInput.bin N M K [--tolerance 1e-4] [--max_iterations 200] [--alpha_W 0] [--alpha_H 0] [--l1_ratio 0] [--seed -1]" 
             << std::endl;
-		//return 1;
 	}
 
     strcpy(file_name, argv[1]);
@@ -34,31 +33,13 @@ void parse_arguments(int argc, char **argv, int* N, int* M, int* K, char* file_n
 
     //parse optional arguments
     for(int i{5} ; i < argc; i++) {
-        if(std::string(argv[i]) == "--tolerance") {
-            //std::cout << "Tol = " << std::string(argv[++i]) << std::endl;
-            if(i + 1 < argc)  tolerance->emplace(std::stod(std::string(argv[++i]), nullptr));
-            else              std::cerr << "--tolerance option requires one argument." << std::endl;
-        }
-        else if(std::string(argv[i]) == "--max_iterations") {
-            if(i + 1 < argc)  max_it->emplace(std::stoi(std::string(argv[++i]), nullptr));
-            else              std::cerr << "--max_iterations option requires one argument." << std::endl;
-        }
-        else if(std::string(argv[i]) == "--alpha_W") {
-            if(i + 1 < argc)  alpha_W->emplace(std::stof(std::string(argv[++i]), nullptr));
-            else              std::cerr << "--alpha_W option requires one argument." << std::endl;
-        }
-        else if(std::string(argv[i]) == "--alpha_H") {
-            if(i + 1 < argc)  alpha_H->emplace(std::stof(std::string(argv[++i]), nullptr));
-            else              std::cerr << "--alpha_H option requires one argument." << std::endl;
-        }
-        else if(std::string(argv[i]) == "--l1_ratio") {
-            if(i + 1 < argc)  l1_ratio->emplace(std::stof(std::string(argv[++i]), nullptr));
-            else              std::cerr << "--l1_ratio option requires one argument." << std::endl;
-        }
-        else if(std::string(argv[i]) == "--seed") {
-            if(i + 1 < argc)  seed->emplace(std::stoi(std::string(argv[++i]), nullptr));
-            else              std::cerr << "--seed option requires one argument." << std::endl;
-        }
+        if(std::string(argv[i]) == "--tolerance")               tolerance->emplace(std::stod(std::string(argv[++i]), nullptr));
+        else if(std::string(argv[i]) == "--max_iterations")     max_it->emplace(std::stoi(std::string(argv[++i]), nullptr));
+        else if(std::string(argv[i]) == "--alpha_W")            alpha_W->emplace(std::stof(std::string(argv[++i]), nullptr));
+        else if(std::string(argv[i]) == "--alpha_H")            alpha_H->emplace(std::stof(std::string(argv[++i]), nullptr));
+        else if(std::string(argv[i]) == "--l1_ratio")           l1_ratio->emplace(std::stof(std::string(argv[++i]), nullptr));
+        else if(std::string(argv[i]) == "--seed")               seed->emplace(std::stoi(std::string(argv[++i]), nullptr));
+        else if(std::string(argv[i]) == "--verbose")            *verbose = true;
         else
             std::cerr << "Argument \"" << std::string(argv[i]) << "\" not valid." << std::endl;
     }
@@ -120,6 +101,7 @@ void print_matrix(C_REAL *m, int I, int J) {
 
 int main(int argc, char **argv) {
     int N, M, K;
+    bool verbose = false;
     char file_name[255];
     std::optional<double> tolerance = std::nullopt;
     std::optional<int> max_it = std::nullopt;
@@ -128,15 +110,15 @@ int main(int argc, char **argv) {
     std::optional<float> alpha_H = std::nullopt;
     std::optional<float> l1_ratio = std::nullopt;
 
-    parse_arguments(argc, argv, &N, &M, &K, file_name, &tolerance, &max_it, &seed, &alpha_W, &alpha_H, &l1_ratio);
+    parse_arguments(argc, argv, &N, &M, &K, file_name, &tolerance, &max_it, &seed, &alpha_W, &alpha_H, &l1_ratio, &verbose);
 
     C_REAL* V = get_V(N, M, file_name);
     
-    NMF nmf = NMF(N, M, K, tolerance, max_it, seed, alpha_W, alpha_H, l1_ratio);
+    NMF nmf = NMF(N, M, K, tolerance, max_it, seed, alpha_W, alpha_H, l1_ratio, verbose);
 
     double t_init = gettime();
 
-    nmf.fit_transform(V, false);
+    nmf.fit_transform(V);
 
     std::cout << "Total time = " << (gettime() - t_init) << " (us)" << std::endl;
     std::cout << "Final error = " << nmf.get_error() << std::endl;
