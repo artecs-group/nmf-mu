@@ -28,12 +28,16 @@ NMF::~NMF() {
 
 void NMF::fit_transform(C_REAL* V, C_REAL* W, C_REAL* H) {
     if(V == NULL)
-        throw "V argument is uninitialized";
+        throw std::invalid_argument("V argument is uninitialized");
 
     _check_non_negative(V);
+    if(W != nullptr && H != nullptr) {
+        _check_non_negative(W);
+        _check_non_negative(H);
+    }
 
     if(_beta_loss <= 0 && std::min_element(V, V+(_N*_M)) == 0)
-        throw "When beta_loss <= 0 and X contains zeros, the solver may diverge. Please add small values to X, or use a positive beta_loss.";
+        throw std::invalid_argument("When beta_loss <= 0 and X contains zeros, the solver may diverge. Please add small values to X, or use a positive beta_loss.");
 
     // Load device where to run kernels
     Device device(_random_seed, _N, _M, _K, V, W, H);
@@ -68,7 +72,7 @@ void NMF::_fit_transform(Device* device) {
 void NMF::_check_non_negative(C_REAL* V) {
     for (size_t i{0}; i < _N*_M; i++) {
         if(V[i] < 0)
-            throw "Not allowed negative values in matrix V.";
+            throw std::invalid_argument("Not allowed negative values in matrix argument.");
     }
 }
 
