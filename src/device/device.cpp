@@ -88,7 +88,7 @@ void Device::_init_random_matrix(C_REAL* Mat, int N, int M, int seed) {
     }
     else {
         std::default_random_engine eng(seed);
-        uniform_real_distribution<C_REAL> distribution(0, std::numeric_limits<C_REAL>::max());
+        std::uniform_real_distribution<C_REAL> distribution(0, std::numeric_limits<C_REAL>::max());
         for (size_t i = 0; i < N*M; i++)
            Mat[i] = distribution(eng);
     }
