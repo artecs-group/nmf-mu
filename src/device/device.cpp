@@ -77,19 +77,18 @@ void Device::_init_random_matrix(C_REAL* Mat, int N, int M, int seed) {
     // It is possible to use "oneapi/mkl/rng.hpp"
     // but breaks the compatibility with other devices such CUDA.
     if(seed < 0) {
-        std::random_device rd;
 #if C_REAL == float
-        std::mt19937 eng(rd());
+        std::mt19937 eng(std::random_device{}());
 #else
-        std::mt19937_64 eng(rd());
+        std::mt19937_64 eng(std::random_device{}());
 #endif
-        std::uniform_real_distribution<C_REAL> distribution(0, std::numeric_limits<C_REAL>::max());
+        std::normal_distribution<C_REAL> distribution(0, 10000);
         for (size_t i = 0; i < N*M; i++)
             Mat[i] = distribution(eng);
     }
     else {
         std::default_random_engine eng(seed);
-        std::uniform_real_distribution<C_REAL> distribution(0, std::numeric_limits<C_REAL>::max());
+        std::normal_distribution<C_REAL> distribution(0, std::numeric_limits<C_REAL>::max());
         for (size_t i = 0; i < N*M; i++)
            Mat[i] = distribution(eng);
     }
