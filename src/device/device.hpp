@@ -44,9 +44,9 @@ class Device {
         ~Device();
         void sync();
         void mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb, int M, int N, int K, int lda, int ldb, int ldc);
-        void sub_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N);
+        void sub_matrices(C_REAL* A, C_REAL* B, int M, int N);
         void div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N);
-        C_REAL nrm2(int n, C_REAL* X);
+        void nrm2(int n, C_REAL* X, float* result);
         void add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N);
         void axpy(C_REAL* x, C_REAL* y, float scalar, int n);
         void dot(C_REAL* x, C_REAL* y, C_REAL* out, int n);

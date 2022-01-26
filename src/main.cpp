@@ -46,14 +46,14 @@ void parse_arguments(int argc, char **argv, int* N, int* M, int* K, char* file_n
 }
 
 
-C_REAL* get_V(int N, int M, char* file_name) {
-	C_REAL *V = new C_REAL[N*M];
+C_REAL* get_matrix(int N, int M, char* file_name) {
+	C_REAL *Mat = new C_REAL[N*M];
 
-	FILE *fIn = fopen(file_name, "r");
-	fread(V, sizeof(C_REAL), N*M, fIn);
+	FILE *fIn = fopen(file_name, "rb");
+	fread(Mat, sizeof(C_REAL), N*M, fIn);
 	fclose(fIn);
 
-	return V;
+	return Mat;
 }
 
 
@@ -65,7 +65,6 @@ C_REAL* mul(int N, int M, int K, C_REAL* W, C_REAL* H) {
             for (size_t k = 0; k < K; k++)
                 V[i*M + j] += W[i*K + k] * H[k*M + j];
     
-
     return V;
 }
 
@@ -112,13 +111,15 @@ int main(int argc, char **argv) {
 
     parse_arguments(argc, argv, &N, &M, &K, file_name, &tolerance, &max_it, &seed, &alpha_W, &alpha_H, &l1_ratio, &verbose);
 
-    C_REAL* V = get_V(N, M, file_name);
+    C_REAL* V = get_matrix(N, M, (char*)"V.bin");
+    C_REAL* W = get_matrix(N, K, (char*)"V.bin");
+    C_REAL* H = get_matrix(K, M, (char*)"V.bin");
     
     NMF nmf = NMF(N, M, K, tolerance, max_it, seed, alpha_W, alpha_H, l1_ratio, verbose);
 
     double t_init = gettime();
 
-    nmf.fit_transform(V);
+    nmf.fit_transform(V, W, H);
 
     std::cout << "Total time = " << (gettime() - t_init) << " (us)" << std::endl;
     std::cout << "Final error = " << nmf.get_error() << std::endl;
@@ -131,5 +132,7 @@ int main(int argc, char **argv) {
     delete[] Vnew;
 
     delete[] V;
+    delete[] W;
+    delete[] H;
     return 0;
 }

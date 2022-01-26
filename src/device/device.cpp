@@ -125,7 +125,7 @@ void Device::mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb,
 
 
 /**
- * @brief Computes C[M, N] = A[M, N] - B[M, N]
+ * @brief Computes B[M, N] = A[M, N] - B[M, N]
  * 
  * @param queue 
  * @param A 
@@ -133,7 +133,7 @@ void Device::mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb,
  * @param M 
  * @param N 
  */
-void Device::sub_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
+void Device::sub_matrices(C_REAL* A, C_REAL* B, int M, int N) {
     int group_size{0};
     int work_items{0};
 	_get_nd_range_dimensions(M, N, &work_items, &group_size);
@@ -142,10 +142,11 @@ void Device::sub_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
         cgh.parallel_for<class A_sub_B>(nd_range(range(work_items), range(group_size)), [=](nd_item<1> item){
             int i = item.get_global_id(0);
 			
-			if(i < M*N)
-            	C[i] = A[i] - B[i];
+	        if(i < M*N)
+            	B[i] = A[i] - B[i];
         });
-    });	
+    });
+    sync();
 }
 
 
@@ -174,12 +175,9 @@ void Device::div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
 }
 
 
-C_REAL Device::nrm2(int n, C_REAL* X) {
-	C_REAL result{0.0};
-	oneapi::mkl::blas::nrm2(_queue, n, X, 1, &result);
-	return result;
+void Device::nrm2(int n, C_REAL* X, float* result) {
+	oneapi::mkl::blas::nrm2(_queue, n, X, 1, result);
 }
-
 
 
 void Device::add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N) {
@@ -208,10 +206,19 @@ void Device::add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N) {
  */
 void Device::_get_nd_range_dimensions(int M, int N, int* work_items, int* group_size) {
 	int max_work_group_size = _queue.get_device().get_info<cl::sycl::info::device::max_work_group_size>();
-    *group_size = max_work_group_size < N ? max_work_group_size : N;
-
+    int remainder{0};
+    
+    if(max_work_group_size >= M*N)
+        *group_size = M*N;
+    else {
+        *group_size = max_work_group_size < N ? max_work_group_size : N;
+        // adjust work-groups number 
     // adjust work-groups number 
-    int remainder = (N == *group_size) ? 0 : *group_size - (N % *group_size);
+        // adjust work-groups number 
+    // adjust work-groups number 
+        // adjust work-groups number 
+        remainder = (N == *group_size) ? 0 : *group_size - (N % *group_size);
+    }
     *work_items = M * (N + remainder);
 }
 
