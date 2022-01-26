@@ -52,8 +52,10 @@ void NMF::_save_results(Device* device) {
     _W = new C_REAL[_N*_K];
     _H = new C_REAL[_K*_M];
 
+    // TODO: check if fails because of the copy (try coping in device) 
     std::copy(device->sW, device->sW + (_N*_K), _W);
     std::copy(device->sH, device->sH + (_K*_M), _H);
+    device->sync();
 }
 
 
@@ -100,12 +102,12 @@ void NMF::_fit_multiplicative_update(Device* device, float beta_loss, int max_it
         //(V*H') / (W*H*H')
         C_REAL* delta_W = _multiplicative_update_w(device, beta_loss, l1_reg_W, l2_reg_W);
         // W = W .* delta_W
-        device->dot(device->sW, delta_W, device->sW, _N*_K);
+        device->element_mul(_N, _K, delta_W, device->sW);
 
         //(W'*V) / (W'*W*H)
         C_REAL* delta_H = _multiplicative_update_h(device, beta_loss, l1_reg_H, l2_reg_H);
         // H = H .* delta_H
-        device->dot(device->sH, delta_H, device->sH, _K*_M);
+        device->element_mul(_K, _M, delta_H, device->sH);
 
         // test convergence criterion every 10 iterations
         if (tolerance > 0 && (n_iter % 10) == 0) {
@@ -160,8 +162,6 @@ C_REAL* NMF::_multiplicative_update_w(Device* device, float beta_loss, float l1_
     // delta_W[N, K] = numerator[N, K] / denominator[N, K]
     device->div_matrices(device->VHt, device->delta_W, device->delta_W, _N, _K);
 
-    device->sync();
-
     return device->delta_W;
 }
 
@@ -196,14 +196,12 @@ C_REAL* NMF::_multiplicative_update_h(Device* device, float beta_loss, float l1_
     // delta_H[K, M] = numerator[K, M] / denominator[K, M]
     device->div_matrices(device->WtV, device->delta_H, device->delta_H, _K, _M);
 
-    device->sync();
-
     return device->delta_H;
 }
 
 
 /**
- * @brief Compute the beta-divergence of X and dot(W, H), "||X - WH||_{loss}^2".
+ * @brief Compute the beta-divergence of X and element_mul(W, H), "||X - WH||_{loss}^2".
  * 
  * @param V 
  * @param W 
@@ -223,7 +221,6 @@ float NMF::_beta_divergence(Device* device) {
         // Euclidean norm
         device->nrm2(_N*_M, device->WH, &result);
         
-        device->sync();
         return result;
     }
     // TODO: add other beta divergences

@@ -49,7 +49,7 @@ class Device {
         void nrm2(int n, C_REAL* X, float* result);
         void add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N);
         void axpy(C_REAL* x, C_REAL* y, float scalar, int n);
-        void dot(C_REAL* x, C_REAL* y, C_REAL* out, int n);
+        void element_mul(int M, int N, C_REAL* A, C_REAL* B);
         void adjust_matrix(C_REAL* Mat, int M, int N);
     private:
         int _random_seed;
