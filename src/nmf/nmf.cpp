@@ -224,7 +224,6 @@ float NMF::_beta_divergence(Device* device) {
         device->nrm2(_N*_M, device->WH, &result);
         
         device->sync();
-        std::cout << result << std::endl;
         return result;
     }
     // TODO: add other beta divergences
