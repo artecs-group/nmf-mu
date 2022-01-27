@@ -1,8 +1,39 @@
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <sstream>
 #include <sys/time.h>
 #include "./common.hpp"
 #include "./nmf/nmf.hpp"
+
+template <typename T>
+void print_matrix(T* m, int I, int J) {	
+	std::cout << "--------------------- matrix --------------------" << std::endl;
+	std::cout << "             ";
+	for (int j = 0; j < J; j++) {
+		if (j < 10)
+			std::cout << j << "      ";
+		else if (j < 100)
+			std::cout << j << "     ";
+		else 
+			std::cout << j << "    ";
+	}
+	std::cout << std::endl;
+
+	for (int i = 0; i < I; i++) {
+		if (i<10)
+			std::cout << "Line   " << i << ": ";
+		else if (i<100)
+			std::cout << "Line  " << i << ": ";
+		else
+			std::cout << "Line " << i << ": ";
+
+		for (int j = 0; j < J; j++)
+			std::cout << m[i*J + j] << " ";
+		std::cout << std::endl;
+	}
+    std::cout << std::endl;
+}
 
 
 double gettime() {
@@ -57,6 +88,53 @@ C_REAL* get_matrix(int N, int M, char* file_name) {
 }
 
 
+C_REAL* read_image(int N, int M, char* file_name) {
+    C_REAL *out = new C_REAL[N*M];
+    unsigned char pixel;
+    int num_of_rows = 0, num_of_cols = 0, max_val;
+
+    std::ifstream infile(file_name, std::ios::binary);
+    std::stringstream ss;
+    std::string inputLine = "";
+
+    getline(infile, inputLine); // read the first line : P5
+    if(inputLine.compare("P5") != 0) std::cerr << "Version error" << std::endl;
+    ss << infile.rdbuf();   //read the third line : width and height
+    ss >> num_of_cols >> num_of_rows;
+    ss >> max_val;
+
+    for(int i{0}; i < N*M; i++) {
+        ss >> pixel;
+        out[i] = (C_REAL)pixel;
+    }
+
+	infile.close();
+	return out;
+}
+
+
+void write_image(int N, int M, char* file_name, C_REAL* Mat) {
+    std::ofstream out_file(file_name, std::ios::binary);
+    std::stringstream ss;
+    int max = *std::max_element(Mat, Mat+(N*M));
+
+    ss << "P5" << std::endl
+       << N << " " << M << std::endl
+       << max << std::endl;
+
+    out_file << ss.rdbuf();
+    
+    for(int i{0}; i < N*M; i++) {
+        if(Mat[i] > 255)
+            out_file << (unsigned char)255;
+        else
+            out_file << (unsigned char) Mat[i];
+    }
+
+	out_file.close();
+}
+
+
 C_REAL* mul(int N, int M, int K, C_REAL* W, C_REAL* H) {
     C_REAL* V = new C_REAL[N*M] {0};
 
@@ -66,35 +144,6 @@ C_REAL* mul(int N, int M, int K, C_REAL* W, C_REAL* H) {
                 V[i*M + j] += W[i*K + k] * H[k*M + j];
     
     return V;
-}
-
-
-void print_matrix(C_REAL *m, int I, int J) {	
-	std::cout << "--------------------- matrix --------------------" << std::endl;
-	std::cout << "             ";
-	for (int j = 0; j < J; j++) {
-		if (j < 10)
-			std::cout << j << "      ";
-		else if (j < 100)
-			std::cout << j << "     ";
-		else 
-			std::cout << j << "    ";
-	}
-	std::cout << std::endl;
-
-	for (int i = 0; i < I; i++) {
-		if (i<10)
-			std::cout << "Line   " << i << ": ";
-		else if (i<100)
-			std::cout << "Line  " << i << ": ";
-		else
-			std::cout << "Line " << i << ": ";
-
-		for (int j = 0; j < J; j++)
-			std::cout << m[i*J + j] << " ";
-		std::cout << std::endl;
-	}
-    std::cout << std::endl;
 }
 
 
@@ -111,7 +160,8 @@ int main(int argc, char **argv) {
 
     parse_arguments(argc, argv, &N, &M, &K, file_name, &tolerance, &max_it, &seed, &alpha_W, &alpha_H, &l1_ratio, &verbose);
 
-    C_REAL* V = get_matrix(N, M, (char*)"V.bin");
+    C_REAL* V = read_image(N, M, file_name);
+    // C_REAL* V = get_matrix(N, M, (char*)"V.bin");
     // C_REAL* W = get_matrix(N, K, (char*)"V.bin");
     // C_REAL* H = get_matrix(K, M, (char*)"V.bin");
     
@@ -122,11 +172,15 @@ int main(int argc, char **argv) {
     nmf.fit_transform(V);
 
     std::cout << std::endl 
-        << "Total time = " << (gettime() - t_init) << " (us)" << std::endl 
+        << "Total time = " << (gettime() - t_init)/1000 << " (ms)" << std::endl 
         << "Final error = " << nmf.get_error() << std::endl
         << "Iterations = " << nmf.get_iterations() << std::endl;
 
+    C_REAL* Vnew = mul(N, M, K, nmf.get_W(), nmf.get_H());
+    write_image(N, M, (char*)"lena_grey_approx.pgm", Vnew);
+
     delete[] V;
+    delete[] Vnew;
     // delete[] W;
     // delete[] H;
     return 0;
