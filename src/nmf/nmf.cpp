@@ -92,8 +92,8 @@ void NMF::_fit_multiplicative_update(Device* device, float beta_loss, int max_it
 {
     // used for the convergence criterion
     // Returns a float representing the divergence between X and WH, which is calculated as "||X - WH||_{loss}^2"
-    double error_at_init = _beta_divergence(device);
-    double previous_error{error_at_init};
+    C_REAL error_at_init = _beta_divergence(device);
+    C_REAL previous_error{error_at_init};
     int n_iter{0};
 
     for (; n_iter < _max_iterations; n_iter++) {
@@ -208,7 +208,7 @@ C_REAL* NMF::_multiplicative_update_h(Device* device, float beta_loss, float l1_
  * @param queue 
  * @return float 
  */
-float NMF::_beta_divergence(Device* device) {
+C_REAL NMF::_beta_divergence(Device* device) {
     // Frobenius norm
     if(_beta_loss == 2.0) {
         // WH[N, M] = W[N, K] * H[K, M]

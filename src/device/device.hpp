@@ -37,9 +37,8 @@ class IntelGpuSelector : public cl::sycl::device_selector {
 
 class Device {
     public:
-        float* nrm2_result{nullptr};
-        C_REAL *dV{nullptr}, *sW{nullptr}, *sH{nullptr}, *XXt{nullptr}, 
-            *VHt{nullptr}, *WtV{nullptr}, *WH{nullptr}, *delta_W{nullptr}, *delta_H{nullptr};
+        C_REAL *dV{nullptr}, *sW{nullptr}, *sH{nullptr}, *XXt{nullptr}, *VHt{nullptr}, 
+            *WtV{nullptr}, *WH{nullptr}, *delta_W{nullptr}, *delta_H{nullptr}, *nrm2_result{nullptr};
 
         Device(int seed, int N, int M, int K, C_REAL* V, C_REAL* W, C_REAL* H);
         ~Device();
@@ -47,7 +46,7 @@ class Device {
         void mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb, int M, int N, int K, int lda, int ldb, int ldc);
         void sub_matrices(C_REAL* A, C_REAL* B, int M, int N);
         void div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N);
-        void nrm2(int n, C_REAL* X, float* result);
+        void nrm2(int n, C_REAL* X, C_REAL* result);
         void add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N);
         void axpy(C_REAL* x, C_REAL* y, float scalar, int n);
         void element_mul(int M, int N, C_REAL* A, C_REAL* B);

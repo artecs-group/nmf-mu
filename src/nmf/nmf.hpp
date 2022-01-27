@@ -69,7 +69,7 @@ class NMF {
         float _l1_ratio;
         float _l1_reg_W, _l1_reg_H, _l2_reg_W, _l2_reg_H;
         int _iterations{0};
-        double _error{0.0};
+        C_REAL _error{0.0};
         C_REAL* _W{nullptr};
         C_REAL* _H{nullptr};
 
@@ -77,7 +77,7 @@ class NMF {
         void _scale_regularization(float* l1_reg_W, float* l1_reg_H, float* l2_reg_W, float* l2_reg_H);
         void _fit_multiplicative_update(Device* device, float beta_loss, int max_iterations, 
             double tolerance, float l1_reg_W, float l1_reg_H, float l2_reg_W, float l2_reg_H);
-        float _beta_divergence(Device* device);
+        C_REAL _beta_divergence(Device* device);
         C_REAL* _multiplicative_update_w(Device* device, float beta_loss, float l1_reg_W, float l2_reg_W);
         C_REAL* _multiplicative_update_h(Device* device, float beta_loss, float l1_reg_H, float l2_reg_H);
         void _save_results(Device* device);

@@ -23,7 +23,7 @@ Device::Device(int seed, int N, int M, int K, C_REAL* V, C_REAL* W, C_REAL* H) {
 	VHt          = malloc_device<C_REAL>(N * K, _queue);
 	WtV		     = malloc_device<C_REAL>(K * M, _queue);
 	WH           = malloc_device<C_REAL>(N * M, _queue);
-    nrm2_result  = malloc_shared<float>(1, _queue);
+    nrm2_result  = malloc_shared<C_REAL>(1, _queue);
 
     if(W != nullptr && H != nullptr) {
         _queue.memcpy(sW, W, sizeof(C_REAL) * N*K);
@@ -172,7 +172,7 @@ void Device::div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
 }
 
 
-void Device::nrm2(int n, C_REAL* X, float* result) {
+void Device::nrm2(int n, C_REAL* X, C_REAL* result) {
 	oneapi::mkl::blas::nrm2(_queue, n, X, 1, result);
     sync();
 }

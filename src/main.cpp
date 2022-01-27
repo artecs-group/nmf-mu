@@ -112,8 +112,8 @@ int main(int argc, char **argv) {
     parse_arguments(argc, argv, &N, &M, &K, file_name, &tolerance, &max_it, &seed, &alpha_W, &alpha_H, &l1_ratio, &verbose);
 
     C_REAL* V = get_matrix(N, M, (char*)"V.bin");
-    C_REAL* W = get_matrix(N, K, (char*)"V.bin");
-    C_REAL* H = get_matrix(K, M, (char*)"V.bin");
+    // C_REAL* W = get_matrix(N, K, (char*)"V.bin");
+    // C_REAL* H = get_matrix(K, M, (char*)"V.bin");
     
     NMF nmf = NMF(N, M, K, tolerance, max_it, seed, alpha_W, alpha_H, l1_ratio, verbose);
 
@@ -126,15 +126,8 @@ int main(int argc, char **argv) {
         << "Final error = " << nmf.get_error() << std::endl
         << "Iterations = " << nmf.get_iterations() << std::endl;
 
-    C_REAL* Vnew = mul(N, M, K, nmf.get_W(), nmf.get_H());
-    std::cout << "Original V = " << std::endl;
-    print_matrix(V, N, M);
-    std::cout << "Approximation V = " << std::endl;
-    print_matrix(Vnew, N, M);
-    delete[] Vnew;
-
     delete[] V;
-    delete[] W;
-    delete[] H;
+    // delete[] W;
+    // delete[] H;
     return 0;
 }
