@@ -52,11 +52,10 @@ class Device {
         void element_mul(int M, int N, C_REAL* A, C_REAL* B);
         void adjust_matrix(C_REAL* Mat, int M, int N);
     private:
-        int _random_seed;
         sycl::queue _queue;
 
         sycl::queue _get_queue();
-        void _init_random_matrix(C_REAL* Mat, int N, int M, int seed);
+        void _init_random_matrix(C_REAL* Mat, int N, int M, int _seed);
         void _get_nd_range_dimensions(int M, int N, int* work_items, int* group_size);
 };
 

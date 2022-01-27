@@ -1,6 +1,7 @@
 #include <iostream>
 #include <random>
 #include <limits>
+#include <oneapi/mkl/rng.hpp>
 #include "oneapi/mkl.hpp"
 #include "./device.hpp"
 
@@ -11,7 +12,6 @@ constexpr oneapi::mkl::transpose non_trans = oneapi::mkl::transpose::nontrans;
 static constexpr C_REAL EPS = std::numeric_limits<C_REAL>::epsilon();
 
 Device::Device(int seed, int N, int M, int K, C_REAL* V, C_REAL* W, C_REAL* H) {
-	_random_seed = seed;
 	_queue = _get_queue();
 
 	dV         = malloc_device<C_REAL>(N * M, _queue);
@@ -29,8 +29,8 @@ Device::Device(int seed, int N, int M, int K, C_REAL* V, C_REAL* W, C_REAL* H) {
         _queue.memcpy(sH, H, sizeof(C_REAL) * K*M);
     }
     else {
-        _init_random_matrix(sW, N, K, _random_seed);
-        _init_random_matrix(sH, K, M, _random_seed);
+        _init_random_matrix(sW, N, K, seed);
+        _init_random_matrix(sH, K, M, seed);
     }
 	
 	_queue.memcpy(dV, V, sizeof(C_REAL) * N*M);
@@ -73,25 +73,14 @@ void Device::sync() {
 }
 
 
-void Device::_init_random_matrix(C_REAL* Mat, int N, int M, int seed) {
-    // It is possible to use "oneapi/mkl/rng.hpp"
-    // but breaks the compatibility with other devices such CUDA.
-    if(seed < 0) {
-#if C_REAL == float
-        std::mt19937 eng(std::random_device{}());
-#else
-        std::mt19937_64 eng(std::random_device{}());
-#endif
-        std::normal_distribution<C_REAL> distribution(0, 10000);
-        for (size_t i = 0; i < N*M; i++)
-            Mat[i] = distribution(eng);
-    }
-    else {
-        std::default_random_engine eng(seed);
-        std::normal_distribution<C_REAL> distribution(0, std::numeric_limits<C_REAL>::max());
-        for (size_t i = 0; i < N*M; i++)
-           Mat[i] = distribution(eng);
-    }
+void Device::_init_random_matrix(C_REAL* Mat, int N, int M, int _seed) {
+    std::uint32_t seed = _seed < 0 ? (unsigned)time(NULL) : _seed;
+
+    oneapi::mkl::rng::mcg31m1 engine(_queue, seed);
+    oneapi::mkl::rng::uniform<C_REAL, oneapi::mkl::rng::uniform_method::standard> rng_distribution(0.0, 10000.0);
+    oneapi::mkl::rng::generate(rng_distribution, engine, N*M, Mat);
+
+    sync();
 }
 
 

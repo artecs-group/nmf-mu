@@ -58,7 +58,7 @@ C_REAL* get_matrix(int N, int M, char* file_name) {
 
 
 C_REAL* mul(int N, int M, int K, C_REAL* W, C_REAL* H) {
-    C_REAL* V = new C_REAL[N*M];
+    C_REAL* V = new C_REAL[N*M] {0};
 
     for (size_t i = 0; i < N; i++)
         for (size_t j = 0; j < M; j++)
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 
     double t_init = gettime();
 
-    nmf.fit_transform(V, W, H);
+    nmf.fit_transform(V);
 
     std::cout << "Total time = " << (gettime() - t_init) << " (us)" << std::endl;
     std::cout << "Final error = " << nmf.get_error() << std::endl;

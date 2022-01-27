@@ -52,10 +52,8 @@ void NMF::_save_results(Device* device) {
     _W = new C_REAL[_N*_K];
     _H = new C_REAL[_K*_M];
 
-    // TODO: check if fails because of the copy (try coping in device) 
     std::copy(device->sW, device->sW + (_N*_K), _W);
     std::copy(device->sH, device->sH + (_K*_M), _H);
-    device->sync();
 }
 
 
@@ -115,7 +113,7 @@ void NMF::_fit_multiplicative_update(Device* device, float beta_loss, int max_it
 
             if(_verbose)
                 std::cout << "Epoch " << n_iter << ", error: " << _error << std::endl;
-            
+
             if ((previous_error - _error) / error_at_init < tolerance)
                 break;
 
