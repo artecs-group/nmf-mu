@@ -53,9 +53,9 @@ Device::~Device() {
 
 sycl::queue Device::_get_queue() {
 #if defined(INTEL_GPU_DEVICE)
-	IntelGPUSelector selector{};
+	IntelGpuSelector selector{};
 #elif defined(NVIDIA_DEVICE)
-	CUDASelector selector{};
+	CudaGpuSelector selector{};
 #elif defined(CPU_DEVICE)	
 	cpu_selector selector{};
 #else
