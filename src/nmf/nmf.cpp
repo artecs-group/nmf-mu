@@ -209,7 +209,6 @@ C_REAL* NMF::_multiplicative_update_h(Device* device, float beta_loss, float l1_
  * @return float 
  */
 float NMF::_beta_divergence(Device* device) {
-    float result{0.0};
     // Frobenius norm
     if(_beta_loss == 2.0) {
         // WH[N, M] = W[N, K] * H[K, M]
@@ -217,9 +216,9 @@ float NMF::_beta_divergence(Device* device) {
         // WH = V - WH
         device->sub_matrices(device->dV, device->WH, _N, _M);
         // Euclidean norm
-        device->nrm2(_N*_M, device->WH, &result);
+        device->nrm2(_N*_M, device->WH, device->nrm2_result);
         
-        return result;
+        return device->nrm2_result[0];
     }
     // TODO: add other beta divergences
     return 0;

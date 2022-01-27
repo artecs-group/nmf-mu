@@ -14,15 +14,16 @@ static constexpr C_REAL EPS = std::numeric_limits<C_REAL>::epsilon();
 Device::Device(int seed, int N, int M, int K, C_REAL* V, C_REAL* W, C_REAL* H) {
 	_queue = _get_queue();
 
-	dV         = malloc_device<C_REAL>(N * M, _queue);
-    sW         = malloc_shared<C_REAL>(N * K, _queue);
-    sH         = malloc_shared<C_REAL>(K * M, _queue);
- 	delta_W    = malloc_device<C_REAL>(N * K, _queue);
-    delta_H    = malloc_device<C_REAL>(K * M, _queue);
-	XXt        = malloc_device<C_REAL>(K * K, _queue);
-	VHt        = malloc_device<C_REAL>(N * K, _queue);
-	WtV		   = malloc_device<C_REAL>(K * M, _queue);
-	WH         = malloc_device<C_REAL>(N * M, _queue);
+	dV           = malloc_device<C_REAL>(N * M, _queue);
+    sW           = malloc_shared<C_REAL>(N * K, _queue);
+    sH           = malloc_shared<C_REAL>(K * M, _queue);
+ 	delta_W      = malloc_device<C_REAL>(N * K, _queue);
+    delta_H      = malloc_device<C_REAL>(K * M, _queue);
+	XXt          = malloc_device<C_REAL>(K * K, _queue);
+	VHt          = malloc_device<C_REAL>(N * K, _queue);
+	WtV		     = malloc_device<C_REAL>(K * M, _queue);
+	WH           = malloc_device<C_REAL>(N * M, _queue);
+    nrm2_result  = malloc_shared<float>(1, _queue);
 
     if(W != nullptr && H != nullptr) {
         _queue.memcpy(sW, W, sizeof(C_REAL) * N*K);
@@ -39,15 +40,16 @@ Device::Device(int seed, int N, int M, int K, C_REAL* V, C_REAL* W, C_REAL* H) {
 
 
 Device::~Device() {
-	if(dV != nullptr) free(dV, _queue);
-	if(sW != nullptr) free(sW, _queue);
-	if(sH != nullptr) free(sH, _queue);
-	if(XXt != nullptr) free(XXt, _queue);
-	if(VHt != nullptr) free(VHt, _queue);
-	if(WtV != nullptr) free(WtV, _queue);
-	if(WH != nullptr) free(WH, _queue);
-	if(delta_W != nullptr) free(delta_W, _queue);
-	if(delta_H != nullptr) free(delta_H, _queue);
+	if(dV != nullptr)           free(dV, _queue);
+	if(sW != nullptr)           free(sW, _queue);
+	if(sH != nullptr)           free(sH, _queue);
+	if(XXt != nullptr)          free(XXt, _queue);
+	if(VHt != nullptr)          free(VHt, _queue);
+	if(WtV != nullptr)          free(WtV, _queue);
+	if(WH != nullptr)           free(WH, _queue);
+	if(delta_W != nullptr)      free(delta_W, _queue);
+	if(delta_H != nullptr)      free(delta_H, _queue);
+    if(nrm2_result != nullptr)  free(nrm2_result, _queue);
 }
 
 

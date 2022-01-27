@@ -37,6 +37,7 @@ class IntelGpuSelector : public cl::sycl::device_selector {
 
 class Device {
     public:
+        float* nrm2_result{nullptr};
         C_REAL *dV{nullptr}, *sW{nullptr}, *sH{nullptr}, *XXt{nullptr}, 
             *VHt{nullptr}, *WtV{nullptr}, *WH{nullptr}, *delta_W{nullptr}, *delta_H{nullptr};
 

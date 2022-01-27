@@ -119,11 +119,12 @@ int main(int argc, char **argv) {
 
     double t_init = gettime();
 
-    nmf.fit_transform(V, W, H);
+    nmf.fit_transform(V);
 
     std::cout << std::endl 
         << "Total time = " << (gettime() - t_init) << " (us)" << std::endl 
-        << "Final error = " << nmf.get_error() << std::endl;
+        << "Final error = " << nmf.get_error() << std::endl
+        << "Iterations = " << nmf.get_iterations() << std::endl;
 
     C_REAL* Vnew = mul(N, M, K, nmf.get_W(), nmf.get_H());
     std::cout << "Original V = " << std::endl;
