@@ -2,7 +2,6 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <sys/time.h>
 #include "./common.hpp"
 #include "./nmf/nmf.hpp"
 
@@ -33,17 +32,6 @@ void print_matrix(T* m, int I, int J) {
 		std::cout << std::endl;
 	}
     std::cout << std::endl;
-}
-
-
-double gettime() {
-	double final_time;
-	struct timeval tv1;
-	
-	gettimeofday(&tv1, (struct timezone*)0);
-	final_time = (tv1.tv_usec + (tv1.tv_sec)*1000000ULL);
-
-	return final_time;
 }
 
 
@@ -170,13 +158,9 @@ int main(int argc, char **argv) {
     // C_REAL* V = get_matrix(N, M, (char*)"V.bin");
     
     NMF nmf = NMF(N, M, K, tolerance, max_it, seed, alpha_W, alpha_H, l1_ratio, verbose);
-
-    double t_init = gettime();
-
     nmf.fit_transform(V);
 
-    std::cout << std::endl 
-        << "Total time = " << (gettime() - t_init)/1000 << " (ms)" << std::endl 
+    std::cout << std::endl
         << "Final error = " << nmf.get_error() << std::endl
         << "Iterations = " << nmf.get_iterations() << std::endl;
 

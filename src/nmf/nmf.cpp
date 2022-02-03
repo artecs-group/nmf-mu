@@ -42,8 +42,22 @@ void NMF::fit_transform(C_REAL* V, C_REAL* W, C_REAL* H) {
     // Load device where to run kernels
     Device device(_random_seed, _N, _M, _K, V, W, H);
 
+    double tinit = gettime();
     _fit_transform(&device);
     _error = _beta_divergence(&device);
+    double tnmf = gettime() - tinit;
+
+	std::cout << std::endl 
+			<< "Total NMF time = " << tnmf/100 << " (ms) --> 100%" << std::endl
+			<< "   * Gemm time               = " << device.tmat_mul/100 << " (ms) --> " << device.tmat_mul/tnmf*100 << "%" << std::endl
+			<< "   * Division time           = " << device.tdiv/100 << " (ms) --> " << device.tdiv/tnmf*100 << "%" << std::endl
+			<< "   * Dot multiplication time = " << device.tdot_mul/100 << " (ms) --> " << device.tdot_mul/tnmf*100 << "%" << std::endl
+            << "   * Adjust time             = " << device.tadjust/100 << " (ms) --> " << device.tadjust/tnmf*100 << "%" << std::endl
+            << "   * NRM2 time               = " << device.tnrm2/100 << " (ms) --> " << device.tnrm2/tnmf*100 << "%" << std::endl
+			<< "   * Sub time                = " << device.tsub/100 << " (ms) --> " << device.tsub/tnmf*100 << "%" << std::endl
+            << "   * Add scalar time         = " << device.tadd_scalar/100 << " (ms) --> " << device.tadd_scalar/tnmf*100 << "%" << std::endl
+            << "   * AXPY time               = " << device.taxpy/100 << " (ms) --> " << device.taxpy/tnmf*100 << "%" << std::endl;
+
     _save_results(&device);
 }
 

@@ -40,6 +40,8 @@ class Device {
         C_REAL *dV{nullptr}, *sW{nullptr}, *sH{nullptr}, *XXt{nullptr}, *VHt{nullptr}, 
             *WtV{nullptr}, *WH{nullptr}, *delta_W{nullptr}, *delta_H{nullptr}, *nrm2_result{nullptr};
 
+        double tmat_mul{0}, tsub{0}, tdiv{0}, tnrm2{0}, tadd_scalar{0}, taxpy{0}, tdot_mul{0}, tadjust{0};
+
         Device(int seed, int N, int M, int K, C_REAL* V, C_REAL* W, C_REAL* H);
         ~Device();
         void sync();
@@ -53,6 +55,7 @@ class Device {
         void adjust_matrix(C_REAL* Mat, int M, int N);
     private:
         sycl::queue _queue;
+        double _init{0};
 
         sycl::queue _get_queue();
         void _init_random_matrix(C_REAL* Mat, int N, int M, int _seed);

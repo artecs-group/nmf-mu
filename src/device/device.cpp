@@ -111,8 +111,10 @@ void Device::mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb,
 	oneapi::mkl::transpose Ta = _Ta ? trans : non_trans;
 	oneapi::mkl::transpose Tb = _Tb ? trans : non_trans;
 
+    _init = gettime();
 	oneapi::mkl::blas::row_major::gemm(_queue, Ta, Tb, M, N, K, 1, A, lda, B, ldb, 0, C, ldc);
     sync();
+    tmat_mul += gettime() - _init;
 }
 
 
@@ -126,6 +128,7 @@ void Device::mat_mul(C_REAL* A, C_REAL* B, C_REAL* C, bool _Ta, bool _Tb,
  * @param N 
  */
 void Device::sub_matrices(C_REAL* A, C_REAL* B, int M, int N) {
+    _init = gettime();
     // int group_size{0};
     // int work_items{0};
 	// _get_nd_range_dimensions(M, N, &work_items, &group_size);
@@ -134,14 +137,14 @@ void Device::sub_matrices(C_REAL* A, C_REAL* B, int M, int N) {
     //     cgh.parallel_for<class A_sub_B>(nd_range(range(work_items), range(group_size)), [=](nd_item<1> item){
     //         int i = item.get_global_id(0);
 			
-	//         if(i < M*N) {
-    //             B[i] = -B[i];
-    //         	B[i] = A[i] + B[i];
-    //         }
+	//         if(i < M*N)
+    //         	B[i] = A[i] - B[i];
     //     });
     // });
+    
     oneapi::mkl::vm::sub(_queue, M*N, A, B, B);
     sync();
+    tsub += gettime() - _init;
 }
 
 
@@ -155,6 +158,7 @@ void Device::sub_matrices(C_REAL* A, C_REAL* B, int M, int N) {
  * @param N 
  */
 void Device::div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
+    _init = gettime();
     // int group_size{0};
     // int work_items{0};
 	// _get_nd_range_dimensions(M, N, &work_items, &group_size);
@@ -167,18 +171,24 @@ void Device::div_matrices(C_REAL* A, C_REAL* B, C_REAL* C, int M, int N) {
     //         	C[i] = A[i] / B[i];
     //     });
     // });
+    
     oneapi::mkl::vm::div(_queue, M*N, A, B, B);
     sync();
+    tdiv += gettime() - _init;
 }
 
 
 void Device::nrm2(int n, C_REAL* X, C_REAL* result) {
+    _init = gettime();
 	oneapi::mkl::blas::nrm2(_queue, n, X, 1, result);
     sync();
+    tnrm2 += gettime() - _init;
 }
 
 
 void Device::add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N) {
+    _init = gettime();
+
     int group_size{0};
     int work_items{0};
 	_get_nd_range_dimensions(M, N, &work_items, &group_size);
@@ -192,6 +202,7 @@ void Device::add_scalar(C_REAL* in, C_REAL* out, float scalar, int M, int N) {
         });
     });
     sync();
+    tadd_scalar += gettime() - _init;
 }
 
 
@@ -219,12 +230,16 @@ void Device::_get_nd_range_dimensions(int M, int N, int* work_items, int* group_
 
 
 void Device::axpy(C_REAL* x, C_REAL* y, float scalar, int n) {
+    _init = gettime();
 	oneapi::mkl::blas::axpy(_queue, n, scalar, x, 1, y, 1);
     sync();
+    taxpy += gettime() - _init;
 }
 
 
 void Device::adjust_matrix(C_REAL* Mat, int M, int N) {
+    _init = gettime();
+
     _queue.submit([&](handler& cgh) {
         cgh.parallel_for<class adjust_matrix>(range<2>(M, N), [=](id <2> ij){
             int i = ij[0];
@@ -235,10 +250,12 @@ void Device::adjust_matrix(C_REAL* Mat, int M, int N) {
         });
     });
     sync();
+    tadjust += gettime() - _init;
 }
 
 
 void Device::element_mul(int M, int N, C_REAL* A, C_REAL* B) {
+    _init = gettime();
     // int group_size{0};
     // int work_items{0};
 	// _get_nd_range_dimensions(M, N, &work_items, &group_size);
@@ -248,9 +265,11 @@ void Device::element_mul(int M, int N, C_REAL* A, C_REAL* B) {
     //         int i = item.get_global_id(0);
 			
 	// 		if(i < M*N)
-    //         	out[i] = x[i] * y[i];
+    //         	B[i] = A[i] * B[i];
     //     });
     // });
+
     oneapi::mkl::vm::mul(_queue, M*N, A, B, B);
     sync();
+    tdot_mul += gettime() - _init;
 }

@@ -36,17 +36,20 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
 
-main: main.o ./device/device.o ./nmf/nmf.o
-	$(CC) $(CFLAGS) $(CLINK) main.o ./device/device.o ./nmf/nmf.o -o main
+main: main.o ./device/device.o ./nmf/nmf.o ./common.o
+	$(CC) $(CFLAGS) $(CLINK) main.o ./device/device.o ./nmf/nmf.o ./common.o -o main
 
-main.o: ./device/device.o ./nmf/nmf.o main.cpp common.hpp
+main.o: ./device/device.o ./nmf/nmf.o main.cpp ./common.o
 	$(CC) $(CFLAGS) main.cpp -c -o main.o
 
-./nmf/nmf.o: ./nmf/nmf.cpp ./nmf/nmf.hpp
+./nmf/nmf.o: ./nmf/nmf.cpp ./nmf/nmf.hpp ./common.o
 	$(CC) $(CFLAGS) ./nmf/nmf.cpp -c -o ./nmf/nmf.o
 
-./device/device.o: ./device/device.cpp ./device/device.hpp
+./device/device.o: ./device/device.cpp ./device/device.hpp ./common.o
 	$(CC) $(CFLAGS) ./device/device.cpp -c -o ./device/device.o
+
+./common.o: ./common.hpp
+	$(CC) $(CFLAGS) ./common.cpp -c -o ./common.o
 
 
 run: main

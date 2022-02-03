@@ -2,4 +2,4 @@
 *.o
 main
 random.bin
-lena*
+*.pgm
