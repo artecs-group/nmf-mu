@@ -116,22 +116,28 @@ C_REAL* read_image(int N, int M, char* file_name) {
 void write_image(int N, int M, char* file_name, C_REAL* Mat) {
     std::ofstream out_file(file_name, std::ios::binary);
     std::stringstream ss;
-    int max = *std::max_element(Mat, Mat+(N*M));
+	unsigned char* pixels = new unsigned char[N*M];
+
+    for(int i{0}; i < N*M; i++) {
+        if(Mat[i] > 255)
+            pixels[i] = 255;
+        else
+            pixels[i] = (unsigned char) Mat[i];
+    }
+
+    int max = *std::max_element(pixels, pixels+(N*M));
 
     ss << "P5" << std::endl
        << N << " " << M << std::endl
        << max << std::endl;
 
     out_file << ss.rdbuf();
-    
-    for(int i{0}; i < N*M; i++) {
-        if(Mat[i] > 255)
-            out_file << (unsigned char)255;
-        else
-            out_file << (unsigned char) Mat[i];
-    }
+
+	for(int i{0}; i < N*M; i++)
+		out_file << pixels[i];
 
 	out_file.close();
+	delete[] pixels;
 }
 
 
@@ -162,8 +168,6 @@ int main(int argc, char **argv) {
 
     C_REAL* V = read_image(N, M, file_name);
     // C_REAL* V = get_matrix(N, M, (char*)"V.bin");
-    // C_REAL* W = get_matrix(N, K, (char*)"V.bin");
-    // C_REAL* H = get_matrix(K, M, (char*)"V.bin");
     
     NMF nmf = NMF(N, M, K, tolerance, max_it, seed, alpha_W, alpha_H, l1_ratio, verbose);
 
@@ -181,7 +185,5 @@ int main(int argc, char **argv) {
 
     delete[] V;
     delete[] Vnew;
-    // delete[] W;
-    // delete[] H;
     return 0;
 }
